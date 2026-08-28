@@ -17,6 +17,17 @@ __pycache__/
 .venv/
 venv/
 
+# Node.js
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
 # Local environment and secrets
 .env
 .env.*

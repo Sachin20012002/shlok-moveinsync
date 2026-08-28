@@ -1,0 +1,22 @@
+.main {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  gap: 0.75rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.main h1 {
+  font-size: clamp(2.5rem, 10vw, 5rem);
+  letter-spacing: 0.08em;
+}
+
+.subtitle {
+  font-size: 1.25rem;
+}
+
+.status {
+  margin-top: 1rem;
+  font-family: monospace;
+}

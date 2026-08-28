@@ -1,5 +1,17 @@
 # Frontend
 
-Frontend application for the SHLOK MoveInSync hackathon project.
+Minimal Next.js application for the SHLOK MoveInSync infrastructure smoke test.
 
-The frontend technology and implementation will be added as the project evolves.
+## Local setup
+
+```bash
+npm install
+```
+
+Copy `.env.example` to `.env.local`, then start the development server:
+
+```bash
+npm run dev
+```
+
+Open `http://localhost:3000`.
