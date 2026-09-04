@@ -38,6 +38,21 @@ export default function InvestigationPage() {
     return () => { active = false; };
   }, [incidentId]);
 
+  useEffect(() => {
+    const elements = document.querySelectorAll<HTMLElement>("[data-investigation-reveal]");
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add(styles.revealVisible);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [loading]);
+
   async function acknowledge() {
     await acknowledgeIncident(incidentId);
     applyInvestigation(await Promise.all([getIncident(incidentId), getIncidentEvents(incidentId)]));
@@ -45,9 +60,9 @@ export default function InvestigationPage() {
 
   return (
     <div className={styles.page}>
-      <Link className={styles.backLink} href="/incidents"><ArrowLeft size={16} aria-hidden="true" />Back to incidents</Link>
-      <header className={styles.investigationHeader}><p className={styles.eyebrow}>Incident investigation</p><h2>Evidence, context, and manager decision</h2></header>
-      {error ? <div className={styles.errorBanner} role="alert"><AlertTriangle size={19} aria-hidden="true" /><div><strong>Investigation could not be loaded</strong><span>{error}</span></div></div> : loading ? <FeedbackState kind="loading" title="Building the investigation" description="Loading current evidence and lifecycle events." /> : incident ? <div className={styles.investigationGrid}><IncidentDetail incident={incident} onAcknowledge={acknowledge} /><IncidentTimeline events={events} /></div> : <FeedbackState kind="empty" title="Incident not found" description="Return to the incident queue and select another issue." />}
+      <div className={styles.revealItem} data-investigation-reveal><Link className={styles.backLink} href="/incidents"><ArrowLeft size={16} aria-hidden="true" />Back to insights</Link></div>
+      <header className={`${styles.investigationHeader} ${styles.revealItem}`} data-investigation-reveal><p className={styles.eyebrow}>Insight investigation</p><h2>Evidence, context, and manager decision</h2></header>
+      {error ? <div className={styles.errorBanner} role="alert"><AlertTriangle size={19} aria-hidden="true" /><div><strong>Investigation could not be loaded</strong><span>{error}</span></div></div> : loading ? <FeedbackState kind="loading" title="Building the investigation" description="Loading current evidence and lifecycle events." /> : incident ? <div className={`${styles.investigationGrid} ${styles.revealItem}`} data-investigation-reveal><IncidentDetail incident={incident} onAcknowledge={acknowledge} /><IncidentTimeline events={events} /></div> : <FeedbackState kind="empty" title="Insight not found" description="Return to the insights queue and select another issue." />}
     </div>
   );
 }

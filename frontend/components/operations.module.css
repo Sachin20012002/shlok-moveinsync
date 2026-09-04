@@ -1,6 +1,6 @@
 .metricCard { min-height: 156px; padding: 22px; position: relative; border-right: 1px solid var(--line); }
 .metricCard:last-child { border-right: 0; }
-.metricFeatured { background: linear-gradient(145deg, #f8faff 0%, #fff 72%); }
+.metricFeatured { background: linear-gradient(145deg, #e9f0ff 0%, #fff 72%); }
 .metricFeatured::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--blue); }
 .metricLabel { display: flex; align-items: center; gap: 8px; color: var(--ink-soft); font-size: .75rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
 .metricLabel > span { width: 32px; height: 32px; display: grid; place-items: center; color: var(--blue); background: var(--blue-soft); border-radius: 8px; }
@@ -29,20 +29,30 @@
 .feedback p { max-width: 420px; font-size: .82rem; line-height: 1.5; }
 .spin { animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes panelReveal { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .metricCard { animation: none; } }
 
-.incidentList { display: grid; gap: 12px; }
-.incidentCard { padding: 18px 19px 14px; display: grid; gap: 15px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
-.incidentCard:hover { border-color: #aebce0; transform: translateY(-1px); box-shadow: 0 9px 24px rgba(20, 33, 61, .08); }
+.incidentList { display: grid; gap: 8px; }
+.incidentCard { padding: 10px 11px 11px; display: grid; gap: 7px; background: #ffffff; border: 1px solid #dbe5f3; border-radius: 9px; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease; animation: insightRowReveal .38s ease both; }
+.incidentCard:nth-child(2) { animation-delay: .07s; }
+.incidentCard:nth-child(3) { animation-delay: .14s; }
+.incidentCard:nth-child(4) { animation-delay: .21s; }
+.incidentCard_critical { background: #fff0f1; border-color: #f1c8cd; }
+.incidentCard_high { background: #fff7e5; border-color: #efd39b; }
+.incidentCard_warning { background: #eaf8f4; border-color: #bfe5d7; }
+.incidentCard:hover { border-color: #c6d2eb; transform: translateY(-1px); box-shadow: 0 8px 18px rgba(83, 105, 151, .08); }
 .incidentTopline, .incidentFooter { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .attentionLabel { display: inline-flex; align-items: center; gap: 6px; color: var(--red); font-size: .75rem; font-weight: 800; }
-.incidentBody { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 22px; }
-.incidentBody h3 { font-size: 1rem; line-height: 1.35; }
-.incidentBody p { margin-top: 5px; color: var(--ink-soft); font-size: .78rem; line-height: 1.5; }
+.incidentBody { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; }
+.incidentBody h3 { color: #1e3152; font-size: .78rem; line-height: 1.35; }
+.incidentBody p { margin-top: 3px; color: #687993; font-size: .66rem; line-height: 1.45; }
 .incidentMetric { min-width: 92px; display: grid; gap: 3px; text-align: right; }
-.incidentMetric strong { font-size: 1.45rem; letter-spacing: -.035em; }
-.incidentMetric span { color: var(--muted); font-size: .75rem; }
-.incidentFooter { padding-top: 12px; border-top: 1px solid #edf0f4; color: var(--muted); font-size: .75rem; }
+.incidentMetric strong { font-size: 1.25rem; letter-spacing: -.035em; }
+.incidentMetric span { color: var(--muted); font-size: .7rem; }
+.incidentFooter { padding-top: 9px; border-top: 1px solid #e5ebf5; color: #718099; font-size: .7rem; }
 .incidentFooter strong { display: inline-flex; align-items: center; gap: 5px; color: var(--blue-dark); }
+@keyframes insightRowReveal { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .incidentCard { animation: none; } }
 
 .uploadCard { padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(20, 33, 61, .05); }
 .uploadIcon { width: 42px; height: 42px; margin-bottom: 16px; display: grid; place-items: center; color: var(--blue); background: var(--blue-soft); border-radius: 10px; }

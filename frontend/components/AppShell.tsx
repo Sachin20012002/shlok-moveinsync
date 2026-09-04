@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BellRing } from "lucide-react";
+import { Activity, BellRing, Bot } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -9,7 +9,8 @@ import styles from "./AppShell.module.css";
 
 const navigation = [
   { href: "/", label: "Operations", icon: Activity },
-  { href: "/incidents", label: "Incidents", icon: BellRing },
+  { href: "/incidents", label: "Insights", icon: BellRing },
+  { href: "/mobility-agent", label: "Mobility Agent", icon: Bot },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {

@@ -2,7 +2,7 @@
 .page { grid-column: 2; min-width: 0; min-height: 100vh; padding: 34px clamp(18px, 5vw, 72px) 60px; }
 .shell { min-height: 100vh; display: grid; grid-template-columns: 220px minmax(0, 1fr); background-color: #f4f6f3; background-image: linear-gradient(#dfe5df 1px, transparent 1px), linear-gradient(90deg, #dfe5df 1px, transparent 1px); background-size: 40px 40px; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 30px; letter-spacing: .08em; }
-.brand span { width: 34px; height: 34px; display: grid; place-items: center; color: #152723; background: #9fe0c2; font: 800 12px/1 "Trebuchet MS", sans-serif; }
+.brand span { width: 34px; height: 34px; display: grid; place-items: center; color: #152723; background: #9fe0c2; font: 800 12px/1 "Aptos", sans-serif; }
 .brand strong { font-size: 18px; }
 .sidebar nav { display: grid; gap: 4px; }
 .sidebar nav a, .sidebar nav button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 12px; color: #aebfba; border: 0; border-radius: 4px; background: transparent; text-align: left; text-decoration: none; cursor: pointer; }

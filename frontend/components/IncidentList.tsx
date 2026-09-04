@@ -9,7 +9,7 @@ export function IncidentList({ incidents }: { incidents: Incident[] }) {
   return (
     <div className={styles.incidentList}>
       {incidents.map((incident) => (
-        <Link className={styles.incidentCard} href={`/incidents/${incident.id}`} key={incident.id}>
+        <Link className={`${styles.incidentCard} ${styles[`incidentCard_${incident.severity}`]}`} href={`/incidents/${incident.id}`} key={incident.id}>
           <div className={styles.incidentTopline}>
             <div><SeverityBadge severity={incident.severity} /><StatusBadge status={incident.status} /></div>
             {incident.attentionRequired && <span className={styles.attentionLabel}><BellRing size={14} aria-hidden="true" />Action required</span>}
