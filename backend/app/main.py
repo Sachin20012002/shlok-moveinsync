@@ -7,10 +7,12 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.database.connection import Base, engine, get_db
-from app.database.models import Incident, MetricSnapshot
-from app.schemas.api import DashboardResponse, IncidentResponse, UploadResponse
+from app.database.connection import SessionLocal, engine, get_db
+from app.database.migrations import migrate_database
+from app.database.models import DatasetUpload, Incident, IncidentEvent, MetricSnapshot
+from app.schemas.api import DashboardResponse, IncidentEventResponse, IncidentResponse, UploadResponse
 from app.services.ingestion import ingest_csv
+from app.services.detection import evaluate_operations
 
 
 settings = get_settings()
@@ -18,7 +20,13 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    Base.metadata.create_all(engine)
+    migrate_database(engine)
+    with SessionLocal() as session:
+        latest_dataset_id = session.scalar(
+            select(DatasetUpload.id).order_by(desc(DatasetUpload.id)).limit(1)
+        )
+        if latest_dataset_id is not None:
+            evaluate_operations(session, latest_dataset_id, settings)
     yield
 
 
@@ -76,7 +84,7 @@ async def upload_dataset(
 def get_dashboard(session: Session = Depends(get_db)) -> DashboardResponse:
     snapshot = session.scalar(select(MetricSnapshot).order_by(desc(MetricSnapshot.id)).limit(1))
     active_incidents = session.scalar(
-        select(func.count()).select_from(Incident).where(Incident.status == "open")
+        select(func.count()).select_from(Incident).where(Incident.attention_required.is_(True))
     ) or 0
     if snapshot is None:
         return DashboardResponse(
@@ -114,7 +122,14 @@ def get_dashboard(session: Session = Depends(get_db)) -> DashboardResponse:
 
 @app.get("/api/incidents", response_model=list[IncidentResponse])
 def list_incidents(session: Session = Depends(get_db)) -> list[Incident]:
-    return list(session.scalars(select(Incident).order_by(desc(Incident.created_at))))
+    return list(
+        session.scalars(
+            select(Incident).order_by(
+                desc(Incident.attention_required),
+                desc(Incident.updated_at),
+            )
+        )
+    )
 
 
 @app.get("/api/incidents/{incident_id}", response_model=IncidentResponse)
@@ -125,14 +140,41 @@ def get_incident(incident_id: int, session: Session = Depends(get_db)) -> Incide
     return incident
 
 
+@app.get("/api/incidents/{incident_id}/events", response_model=list[IncidentEventResponse])
+def get_incident_events(
+    incident_id: int,
+    session: Session = Depends(get_db),
+) -> list[IncidentEvent]:
+    if session.get(Incident, incident_id) is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return list(
+        session.scalars(
+            select(IncidentEvent)
+            .where(IncidentEvent.incident_id == incident_id)
+            .order_by(IncidentEvent.created_at)
+        )
+    )
+
+
 @app.post("/api/incidents/{incident_id}/acknowledge", response_model=IncidentResponse)
 def acknowledge_incident(incident_id: int, session: Session = Depends(get_db)) -> Incident:
     incident = session.get(Incident, incident_id)
     if incident is None:
         raise HTTPException(status_code=404, detail="Incident not found")
-    if incident.status == "open":
+    if incident.status in {"open", "reopened"}:
         incident.status = "acknowledged"
         incident.acknowledged_at = datetime.utcnow()
+        incident.acknowledged_value = incident.current_value
+        incident.attention_required = False
+        incident.updated_at = datetime.utcnow()
+        session.add(
+            IncidentEvent(
+                incident_id=incident.id,
+                event_type="acknowledged",
+                metric_value=incident.current_value,
+                message=f"Manager acknowledged the incident at {incident.current_value}%.",
+            )
+        )
         session.commit()
         session.refresh(incident)
     return incident

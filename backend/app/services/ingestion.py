@@ -2,11 +2,11 @@ import csv
 import io
 
 from pydantic import ValidationError
-from sqlalchemy import delete
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import Settings
-from app.database.models import DatasetUpload, Incident, MetricSnapshot, Trip
+from app.database.models import DatasetUpload, Trip
 from app.schemas.trip import TripRow
 from app.services.detection import evaluate_dataset
 
@@ -53,10 +53,19 @@ def ingest_csv(
     if not valid_rows:
         raise ValueError("CSV contains no valid trip rows")
 
-    session.execute(delete(Incident))
-    session.execute(delete(MetricSnapshot))
-    session.execute(delete(Trip))
-    session.execute(delete(DatasetUpload))
+    existing_trip_ids = set(
+        session.scalars(
+            select(Trip.trip_id).where(
+                Trip.trip_id.in_([row.trip_id for row in valid_rows])
+            )
+        )
+    )
+    if existing_trip_ids:
+        examples = ", ".join(sorted(existing_trip_ids)[:3])
+        raise ValueError(
+            f"Trip IDs already exist: {examples}. Use unique trip_id values for each upload."
+        )
+
     upload = DatasetUpload(
         filename=filename,
         valid_rows=len(valid_rows),

@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     ota_sla: float = 90.0
     ota_grace_minutes: int = 5
     minimum_completed_trips: int = 10
+    vendor_minimum_completed_trips: int = 3
+    gps_availability_sla: float = 95.0
+    incident_reopen_drop_points: float = 5.0
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

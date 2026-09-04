@@ -11,7 +11,7 @@ export type Incident = {
   id: number;
   title: string;
   severity: "warning" | "high" | "critical";
-  status: "open" | "acknowledged" | "resolved";
+  status: "open" | "acknowledged" | "reopened" | "resolved";
   currentValue: number;
   slaValue: number;
   previousValue: number | null;
@@ -23,6 +23,13 @@ export type Incident = {
   recommendedAction: string;
   dataQualityWarning: string | null;
   createdAt: string;
+  updatedAt: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedValue: number | null;
+  lastNotifiedAt: string | null;
+  lastNotifiedValue: number | null;
+  notificationCount: number;
+  attentionRequired: boolean;
 };
 
 export type UploadResult = {

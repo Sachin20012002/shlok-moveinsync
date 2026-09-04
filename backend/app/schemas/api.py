@@ -39,6 +39,13 @@ class IncidentResponse(BaseModel):
     recommended_action: str = Field(alias="recommendedAction")
     data_quality_warning: str | None = Field(alias="dataQualityWarning")
     created_at: datetime = Field(alias="createdAt")
+    updated_at: datetime | None = Field(alias="updatedAt")
+    acknowledged_at: datetime | None = Field(alias="acknowledgedAt")
+    acknowledged_value: float | None = Field(alias="acknowledgedValue")
+    last_notified_at: datetime | None = Field(alias="lastNotifiedAt")
+    last_notified_value: float | None = Field(alias="lastNotifiedValue")
+    notification_count: int = Field(alias="notificationCount")
+    attention_required: bool = Field(alias="attentionRequired")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
@@ -52,3 +59,13 @@ class UploadResponse(BaseModel):
     incident_created: bool = Field(alias="incidentCreated")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class IncidentEventResponse(BaseModel):
+    id: int
+    event_type: str = Field(alias="eventType")
+    metric_value: float = Field(alias="metricValue")
+    message: str
+    created_at: datetime = Field(alias="createdAt")
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

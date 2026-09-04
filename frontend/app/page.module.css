@@ -43,6 +43,7 @@
 .incidentItem strong, .incidentSelected strong { font-size: 14px; }
 .incidentItem small, .incidentSelected small { grid-column: 2; color: #65746f; }
 .incidentItem svg, .incidentSelected svg { grid-column: 3; grid-row: 1 / span 2; color: #81908b; }
+.unread { position: absolute; top: 13px; right: 13px; width: 8px; height: 8px; border-radius: 50%; background: #c5342d; box-shadow: 0 0 0 3px #fff; }
 .severity { display: inline-flex; width: fit-content; padding: 4px 7px; border-radius: 3px; font-size: 10px; font-weight: 900; text-transform: uppercase; }
 .critical { color: #fff; background: #a62d28; }
 .high { color: #8a2e2c; background: #fae3df; }
@@ -51,6 +52,8 @@
 .detailHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .detailHeader h2 { margin-top: 9px; }
 .statusPill { padding: 5px 8px; color: #4d625c; background: #e8eeeb; border-radius: 3px; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.reopenedAlert { display: flex; align-items: flex-start; gap: 11px; margin-top: 20px; padding: 14px; color: #842d28; border: 1px solid #e1aaa5; border-radius: 4px; background: #fff0ee; }
+.reopenedAlert p { margin-top: 4px; color: #684642; font-size: 12px; line-height: 1.45; }
 .comparison { display: grid; grid-template-columns: repeat(3, 1fr); margin: 24px 0; border: 1px solid #d7dfdb; }
 .comparison div { padding: 15px; border-right: 1px solid #d7dfdb; }
 .comparison div:last-child { border-right: 0; }

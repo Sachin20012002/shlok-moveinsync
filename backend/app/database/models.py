@@ -70,4 +70,21 @@ class Incident(Base):
     recommended_action: Mapped[str] = mapped_column(Text)
     data_quality_warning: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    acknowledged_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_notified_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    last_notified_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    notification_count: Mapped[int] = mapped_column(Integer, default=1)
+    attention_required: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class IncidentEvent(Base):
+    __tablename__ = "incident_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    incident_id: Mapped[int] = mapped_column(ForeignKey("incidents.id"), index=True)
+    event_type: Mapped[str] = mapped_column(String(30), index=True)
+    metric_value: Mapped[float] = mapped_column(Float)
+    message: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

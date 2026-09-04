@@ -34,7 +34,14 @@ Copy-Item .env.example .env.local -ErrorAction SilentlyContinue
 npm run dev
 ```
 
-Open `http://localhost:3000`. Select **Upload trip CSV** and choose `sample-data/ota-breach-demo.csv`. The upload produces 75% OTA against the 90% SLA, creates one critical incident, and exposes the acknowledgment action.
+Open `http://localhost:3000`. Select **Upload trip CSV** and choose `sample-data/ota-breach-demo.csv`. The upload produces overall OTA, vendor OTA, and GPS availability incidents. Upload `sample-data/ota-breach-evening.csv` next to append another 12 trips and another set of incidents.
+
+To demonstrate re-notification on deterioration with a fresh database:
+
+1. Upload `sample-data/ota-breach-demo.csv`.
+2. Acknowledge the overall OTA incident at 75%.
+3. Upload `sample-data/ota-critical-deterioration.csv`.
+4. The same incident ID reopens at 37.5%, shows notification number 2, and requires acknowledgment again.
 
 Useful URLs:
 
@@ -42,7 +49,7 @@ Useful URLs:
 - Backend health: `http://localhost:8000/health`
 - Swagger API: `http://localhost:8000/docs`
 
-SQLite data is stored locally in `backend/mobility.db`. Each new upload replaces the previous demo dataset so metrics remain deterministic.
+SQLite data is stored locally in `backend/mobility.db`. Uploads append to the database; the dashboard metrics represent the latest uploaded dataset while the incident queue retains incidents from every upload. CSV columns stay the same, but every row must have a globally unique `trip_id`.
 
 ## Implemented API
 
@@ -59,6 +66,10 @@ SQLite data is stored locally in `backend/mobility.db`. Each new upload replaces
 - Arrival up to and including five minutes late is on time.
 - OTA is evaluated only after at least 10 completed trips.
 - Duplicate open OTA incidents are prevented.
+- Incident identity is scoped by operational rule, such as overall OTA or a specific vendor's OTA. New trip batches update the active incident instead of creating duplicates.
+- A dataset can create overall OTA, vendor OTA, and GPS availability incidents.
+- Acknowledged incidents reopen after a five percentage-point deterioration or severity escalation.
+- Incident events record opening, acknowledgment, reopening/escalation, and recovery.
 - Python calculates official metrics; AI is intentionally deferred until this core flow is stable.
 
 ## Team SHLOK

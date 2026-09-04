@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.database.connection import Base
-from app.database.models import DatasetUpload, Incident, Trip
-from app.services.detection import evaluate_dataset
+from app.database.models import DatasetUpload, Incident, IncidentEvent, Trip
+from app.services.detection import evaluate_operations
 
 
-def test_sla_breach_creates_only_one_open_incident() -> None:
+def test_acknowledged_incident_reopens_after_material_deterioration() -> None:
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     scheduled = datetime(2026, 9, 4, 9, 0)
@@ -39,11 +39,44 @@ def test_sla_breach_creates_only_one_open_incident() -> None:
         session.commit()
 
         settings = Settings(database_url="sqlite:///:memory:")
-        first = evaluate_dataset(session, upload.id, settings)
-        second = evaluate_dataset(session, upload.id, settings)
+        first = evaluate_operations(session, upload.id, settings)
 
         assert first is not None
         assert first.current_value == 80.0
         assert first.severity == "high"
-        assert second is not None
-        assert len(list(session.scalars(select(Incident)))) == 1
+        first.status = "acknowledged"
+        first.acknowledged_at = datetime.utcnow()
+        first.acknowledged_value = first.current_value
+        first.attention_required = False
+        session.add_all(
+            [
+                Trip(
+                    dataset_upload_id=upload.id,
+                    trip_id=f"T{index}",
+                    vendor_id="Vendor A",
+                    route_id="R1",
+                    shift_id="Morning",
+                    employee_id=f"E{index}",
+                    transport_mode="cab",
+                    scheduled_arrival=scheduled,
+                    actual_arrival=scheduled + timedelta(minutes=20),
+                    status="completed",
+                    gps_available=True,
+                )
+                for index in range(10, 20)
+            ]
+        )
+        session.commit()
+
+        reopened = evaluate_operations(session, upload.id, settings)
+
+        assert reopened is not None
+        assert reopened.id == first.id
+        assert reopened.current_value == 40.0
+        assert reopened.status == "reopened"
+        assert reopened.attention_required is True
+        assert reopened.notification_count == 2
+        assert len(list(session.scalars(select(Incident)))) == 2
+        event_types = list(session.scalars(select(IncidentEvent.event_type)))
+        assert event_types.count("opened") == 2
+        assert "reopened" in event_types
