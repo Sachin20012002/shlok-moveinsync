@@ -1,17 +1,13 @@
 # Frontend
 
-Minimal Next.js application for the SHLOK MoveInSync infrastructure smoke test.
+Next.js operations dashboard for mobility metrics, incidents, evidence, and manager acknowledgment.
 
 ## Local setup
 
-```bash
+```powershell
 npm install
-```
-
-Copy `.env.example` to `.env.local`, then start the development server:
-
-```bash
+Copy-Item .env.example .env.local
 npm run dev
 ```
 
-Open `http://localhost:3000`.
+Open `http://localhost:3000`. FastAPI must also be running on port 8000.

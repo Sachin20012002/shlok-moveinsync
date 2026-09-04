@@ -12,6 +12,7 @@ Desktop.ini
 # Python
 __pycache__/
 *.py[cod]
+*.db
 
 # Python virtual environments
 .venv/

@@ -1,21 +1,25 @@
 # Backend
 
-Minimal FastAPI application for the SHLOK MoveInSync infrastructure smoke test.
+FastAPI API for CSV ingestion, deterministic OTA calculation, SLA incident detection, and SQLite persistence.
 
 ## Local setup
 
-From inside `backend/`, create and activate a virtual environment, then install the dependencies:
+From PowerShell inside `backend/`:
 
-```bash
-python -m venv .venv
-.venv\Scripts\activate
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
+Copy-Item .env.example .env
 ```
 
 ## Run
 
-```bash
-uvicorn app.main:app --reload
+```powershell
+python -m uvicorn app.main:app --reload
 ```
 
-The API is available at `http://127.0.0.1:8000`.
+API: `http://localhost:8000`  
+Swagger: `http://localhost:8000/docs`
+
+Run tests with `python -m pytest -q`.
