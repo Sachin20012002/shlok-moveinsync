@@ -10,9 +10,10 @@ from app.core.config import get_settings
 from app.database.connection import SessionLocal, engine, get_db
 from app.database.migrations import migrate_database
 from app.database.models import DatasetUpload, Incident, IncidentEvent, MetricSnapshot
-from app.schemas.api import DashboardResponse, IncidentEventResponse, IncidentResponse, UploadResponse
+from app.schemas.api import DashboardResponse, IncidentEventResponse, IncidentResponse, OperationsResponse, UploadResponse
 from app.services.ingestion import ingest_csv
 from app.services.detection import evaluate_operations
+from app.services.operations import build_operations_response
 
 
 settings = get_settings()
@@ -118,6 +119,11 @@ def get_dashboard(session: Session = Depends(get_db)) -> DashboardResponse:
         average_delay_minutes=snapshot.average_delay_minutes,
         active_incident_count=active_incidents,
     )
+
+
+@app.get("/api/operations", response_model=OperationsResponse)
+def get_operations(session: Session = Depends(get_db)) -> OperationsResponse:
+    return build_operations_response(session, settings)
 
 
 @app.get("/api/incidents", response_model=list[IncidentResponse])

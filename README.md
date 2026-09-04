@@ -56,9 +56,17 @@ SQLite data is stored locally in `backend/mobility.db`. Uploads append to the da
 - `GET /health`
 - `POST /api/datasets/upload`
 - `GET /api/dashboard`
+- `GET /api/operations`
 - `GET /api/incidents`
 - `GET /api/incidents/{id}`
+- `GET /api/incidents/{id}/events`
 - `POST /api/incidents/{id}/acknowledge`
+
+## Operations Workspace
+
+The Operations page includes current mobility health, a five-item attention queue, live trip exceptions, shift readiness, a vendor watchlist, an operational timeline, data-quality status, and recommended actions. These views are computed from SQLite through `GET /api/operations`.
+
+The dedicated `/incidents` page contains all incident statuses, filters, acknowledgment controls, notification counts, and lifecycle history.
 
 ## Calculation Rules
 

@@ -40,6 +40,27 @@ def test_upload_to_acknowledgment_flow() -> None:
             assert dashboard["onTimeArrival"]["value"] == 75.0
             assert dashboard["activeIncidentCount"] == 3
 
+            operations = client.get("/api/operations")
+            assert operations.status_code == 200
+            operations_data = operations.json()
+            assert operations_data["maximumDelayMinutes"] == 22.0
+            assert operations_data["tripExceptions"][0]["tripId"] == "TRIP-007"
+            incidents_by_title = {
+                incident["title"]: incident["id"]
+                for incident in client.get("/api/incidents").json()
+            }
+            assert incidents_by_title["On-time arrival below SLA"] in operations_data["tripExceptions"][0]["relatedIncidentIds"]
+            gps_exception = next(
+                trip for trip in operations_data["tripExceptions"]
+                if "GPS unavailable" in trip["issue"]
+            )
+            assert incidents_by_title["GPS availability below target"] in gps_exception["relatedIncidentIds"]
+            assert operations_data["shiftReadiness"][0]["status"] == "at_risk"
+            assert operations_data["vendorWatchlist"][0]["vendorId"] == "Vendor A"
+            assert operations_data["dataQuality"]["missingGps"] == 1
+            assert len(operations_data["recommendedActions"]) == 3
+            assert len(operations_data["timeline"]) == 3
+
             incidents = client.get("/api/incidents").json()
             assert len(incidents) == 3
             assert {incident["title"] for incident in incidents} == {

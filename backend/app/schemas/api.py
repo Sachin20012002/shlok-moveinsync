@@ -69,3 +69,79 @@ class IncidentEventResponse(BaseModel):
     created_at: datetime = Field(alias="createdAt")
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class TripExceptionResponse(BaseModel):
+    trip_id: str = Field(alias="tripId")
+    issue: str
+    delay_minutes: float | None = Field(alias="delayMinutes")
+    related_incident_ids: list[int] = Field(alias="relatedIncidentIds")
+    vendor_id: str = Field(alias="vendorId")
+    route_id: str = Field(alias="routeId")
+    employee_id: str = Field(alias="employeeId")
+    recommended_action: str = Field(alias="recommendedAction")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class ShiftReadinessResponse(BaseModel):
+    shift_id: str = Field(alias="shiftId")
+    completed_trips: int = Field(alias="completedTrips")
+    delayed_trips: int = Field(alias="delayedTrips")
+    missing_arrivals: int = Field(alias="missingArrivals")
+    affected_employees: int = Field(alias="affectedEmployees")
+    status: str
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class VendorWatchResponse(BaseModel):
+    vendor_id: str = Field(alias="vendorId")
+    ota: float
+    delayed_trips: int = Field(alias="delayedTrips")
+    missing_gps: int = Field(alias="missingGps")
+    attention_incidents: int = Field(alias="attentionIncidents")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class TimelineEventResponse(BaseModel):
+    incident_id: int = Field(alias="incidentId")
+    title: str
+    event_type: str = Field(alias="eventType")
+    message: str
+    created_at: datetime = Field(alias="createdAt")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class DataQualityResponse(BaseModel):
+    missing_gps: int = Field(alias="missingGps")
+    missing_arrivals: int = Field(alias="missingArrivals")
+    invalid_rows: int = Field(alias="invalidRows")
+    skipped_rows: int = Field(alias="skippedRows")
+    last_data_update: datetime | None = Field(alias="lastDataUpdate")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class RecommendedActionResponse(BaseModel):
+    incident_id: int = Field(alias="incidentId")
+    severity: str
+    title: str
+    action: str
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class OperationsResponse(BaseModel):
+    active_trips: int = Field(alias="activeTrips")
+    maximum_delay_minutes: float | None = Field(alias="maximumDelayMinutes")
+    trip_exceptions: list[TripExceptionResponse] = Field(alias="tripExceptions")
+    shift_readiness: list[ShiftReadinessResponse] = Field(alias="shiftReadiness")
+    vendor_watchlist: list[VendorWatchResponse] = Field(alias="vendorWatchlist")
+    timeline: list[TimelineEventResponse]
+    data_quality: DataQualityResponse = Field(alias="dataQuality")
+    recommended_actions: list[RecommendedActionResponse] = Field(alias="recommendedActions")
+
+    model_config = ConfigDict(populate_by_name=True)
