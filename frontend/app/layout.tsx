@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SHLOK | Mobility Control Room",
-  description: "Agentic operations intelligence for enterprise mobility",
+  title: "MoveInSync Mobility Control Room | Team SHLOK",
+  description: "Agentic enterprise mobility operations intelligence by Team SHLOK",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

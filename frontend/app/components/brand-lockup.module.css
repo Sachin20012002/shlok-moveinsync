@@ -1,0 +1,85 @@
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 0 6px 28px;
+  color: #edf5f1;
+  text-decoration: none;
+}
+
+.logoPanel {
+  display: grid;
+  width: 100%;
+  min-height: 55px;
+  place-items: center;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.logoPanel img {
+  display: block;
+  width: 113px;
+  height: 45px;
+}
+
+.team {
+  padding-left: 2px;
+  color: #9fb2ac;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.team strong {
+  color: #9fe0c2;
+  font-weight: 900;
+}
+
+.brand:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid #9fe0c2;
+  outline-offset: 4px;
+}
+
+@media (max-width: 980px) {
+  .brand {
+    margin-inline: 0;
+  }
+
+  .logoPanel {
+    min-height: 46px;
+    overflow: hidden;
+    padding: 3px;
+  }
+
+  .logoPanel img {
+    width: 48px;
+    height: auto;
+  }
+
+  .team {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .brand {
+    width: 126px;
+    margin: 0;
+  }
+
+  .logoPanel {
+    min-height: 38px;
+    padding: 0 8px;
+  }
+
+  .logoPanel img {
+    width: 96px;
+    height: auto;
+  }
+}

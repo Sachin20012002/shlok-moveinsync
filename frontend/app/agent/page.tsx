@@ -6,6 +6,7 @@ import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AgentContext, AgentMessage, getAgentStatus, getIncidents, Incident, streamAgent } from "../api/client";
+import { BrandLockup } from "../components/brand-lockup";
 import { MobileNav } from "../components/mobile-nav";
 import styles from "./agent.module.css";
 
@@ -124,7 +125,7 @@ export default function AgentPage() {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}><span>SL</span><strong>SHLOK</strong></div>
+        <BrandLockup />
         <nav aria-label="Primary navigation">
           <Link href="/"><Gauge size={18} /> Operations</Link>
           <Link href="/incidents"><ShieldAlert size={18} /> Incidents</Link>

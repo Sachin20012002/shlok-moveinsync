@@ -4,6 +4,7 @@ import { AlertTriangle, ArrowDown, ArrowLeft, ArrowUp, Bot, Database, Download, 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { DataDashboard, DataDashboardKind, DashboardQuery, getDataDashboard, getDataDashboardExportUrl } from "../api/client";
+import { BrandLockup } from "./brand-lockup";
 import { MobileNav } from "./mobile-nav";
 import styles from "./data-dashboard.module.css";
 
@@ -201,7 +202,7 @@ export function DataDashboardPage({ kind }: { kind: DataDashboardKind }) {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}><span>SL</span><strong>SHLOK</strong></div>
+        <BrandLockup />
         <nav aria-label="Primary navigation">
           <Link href="/"><Gauge size={18} /> Operations</Link>
           <Link href="/incidents"><AlertTriangle size={18} /> Incidents</Link>
