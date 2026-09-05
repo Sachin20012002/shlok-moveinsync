@@ -107,6 +107,13 @@ export type IncidentEvent = {
   createdAt: string;
 };
 
+export type IncidentEmailDraft = {
+  recipient: string;
+  subject: string;
+  body: string;
+  filename: string;
+};
+
 export type PerformanceSummary = {
   completedTrips: number;
   delayedTrips: number;
@@ -247,6 +254,14 @@ export async function getIncidents(): Promise<Incident[]> {
 
 export async function getIncidentEvents(id: number): Promise<IncidentEvent[]> {
   return request<IncidentEvent[]>(`/api/incidents/${id}/events`);
+}
+
+export async function getIncidentEmailDraft(id: number): Promise<IncidentEmailDraft> {
+  return request<IncidentEmailDraft>(`/api/incidents/${id}/email-draft`);
+}
+
+export async function markIncidentEmailSent(id: number): Promise<IncidentEvent> {
+  return request<IncidentEvent>(`/api/incidents/${id}/email-sent`, { method: "POST" });
 }
 
 export async function getIncidentTrips(id: number, page = 1, pageSize = 25): Promise<IncidentTripEvidence> {

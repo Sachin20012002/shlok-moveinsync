@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.database.connection import SessionLocal, engine, get_db
 from app.database.migrations import migrate_database
 from app.database.models import DatasetUpload, Incident, IncidentEvent, MetricSnapshot
-from app.schemas.api import DataDashboardResponse, DashboardResponse, IncidentEventResponse, IncidentResponse, IncidentTripEvidenceResponse, MobilityAgentRequest, OperationsAnalyticsResponse, OperationsResponse, UploadResponse
+from app.schemas.api import DataDashboardResponse, DashboardResponse, IncidentEmailDraftResponse, IncidentEventResponse, IncidentResponse, IncidentTripEvidenceResponse, MobilityAgentRequest, OperationsAnalyticsResponse, OperationsResponse, UploadResponse
 from app.services.agent import build_agent_context, stream_agent_response
 from app.services.agent_tools import (
     execute_agent_tool,
@@ -542,6 +542,78 @@ def get_incident_events(
             .order_by(IncidentEvent.created_at)
         )
     )
+
+
+def _incident_email_draft(incident: Incident) -> IncidentEmailDraftResponse:
+    recipient = f"{incident.contributing_vendor} operations team" if incident.contributing_vendor else "Mobility operations team"
+    subject = f"Action required: {incident.title}"
+    body = "\n".join(
+        [
+            "Hello team,",
+            "",
+            f"We are following up on the acknowledged mobility incident: {incident.title}.",
+            f"Current performance is {incident.current_value}% against the {incident.sla_value}% SLA.",
+            f"Employees affected: {incident.affected_employees}.",
+            "",
+            f"Evidence summary: {incident.reason}",
+            "",
+            f"Requested action: {incident.recommended_action}",
+            "",
+            "Please confirm ownership and share the recovery plan and expected completion time.",
+            "",
+            "Regards,",
+            "SHLOK Mobility Operations",
+        ]
+    )
+    return IncidentEmailDraftResponse(
+        recipient=recipient,
+        subject=subject,
+        body=body,
+        filename=f"incident-{incident.id}-email-draft.txt",
+    )
+
+
+@app.get("/api/incidents/{incident_id}/email-draft", response_model=IncidentEmailDraftResponse)
+def get_incident_email_draft(
+    incident_id: int,
+    session: Session = Depends(get_db),
+) -> IncidentEmailDraftResponse:
+    incident = session.get(Incident, incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    if incident.status != "acknowledged":
+        raise HTTPException(status_code=409, detail="Acknowledge the incident before drafting an email")
+    return _incident_email_draft(incident)
+
+
+@app.post("/api/incidents/{incident_id}/email-sent", response_model=IncidentEventResponse)
+def mark_incident_email_sent(
+    incident_id: int,
+    session: Session = Depends(get_db),
+) -> IncidentEvent:
+    incident = session.get(Incident, incident_id)
+    if incident is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    if incident.status != "acknowledged":
+        raise HTTPException(status_code=409, detail="Acknowledge the incident before sending an email")
+    existing = session.scalar(
+        select(IncidentEvent)
+        .where(IncidentEvent.incident_id == incident_id, IncidentEvent.event_type == "email_sent")
+        .order_by(desc(IncidentEvent.created_at))
+        .limit(1)
+    )
+    if existing is not None:
+        return existing
+    event = IncidentEvent(
+        incident_id=incident.id,
+        event_type="email_sent",
+        metric_value=incident.current_value,
+        message="Incident notification email was marked as sent by the transport manager.",
+    )
+    session.add(event)
+    session.commit()
+    session.refresh(event)
+    return event
 
 
 @app.post("/api/incidents/{incident_id}/acknowledge", response_model=IncidentResponse)

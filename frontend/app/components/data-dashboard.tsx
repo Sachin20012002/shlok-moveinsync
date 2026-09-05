@@ -32,6 +32,7 @@ const CONFIGS: Record<DataDashboardKind, DashboardConfig> = {
       { key: "ota", label: "OTA", suffix: "%" },
       { key: "noShows", label: "No-shows" },
       { key: "driverNonCompliance", label: "Driver NC" },
+      { key: "affectedEmployees", label: "Employees affected" },
     ],
     filters: [
       { key: "startDate", label: "From", type: "date" },
@@ -227,7 +228,7 @@ export function DataDashboardPage({ kind }: { kind: DataDashboardKind }) {
 
         {error && <div className={styles.error} role="alert"><AlertTriangle size={18} /> {error}</div>}
 
-        <section className={styles.metrics} aria-label="Summary metrics" aria-busy={loading}>
+        <section className={`${styles.metrics} ${kind === "trips" ? styles.tripMetrics : ""}`} aria-label="Summary metrics" aria-busy={loading}>
           {config.metrics.map((metric) => <article key={metric.key}><span>{metric.label}</span><strong>{loading && !data ? "—" : displayValue(data?.summary[metric.key])}{data?.summary[metric.key] !== null && data?.summary[metric.key] !== undefined ? metric.suffix : ""}</strong></article>)}
         </section>
 

@@ -45,6 +45,7 @@
 .tabs .tabActive { border-color: #16805f; color: #115e48; }
 .error { max-width: 1500px; margin: 0 auto 14px; padding: 12px 14px; display: flex; align-items: center; gap: 8px; border: 1px solid #e9b9ad; border-radius: 6px; background: #fff2ee; color: #983b28; font-size: 13px; }
 .metrics { max-width: 1500px; margin: 0 auto 16px; display: grid; grid-template-columns: repeat(6, minmax(120px, 1fr)); border: 1px solid #d8dfdc; border-radius: 7px; background: #fff; overflow: hidden; }
+.tripMetrics { grid-template-columns: repeat(7, minmax(110px, 1fr)); }
 .metrics article { min-height: 95px; padding: 17px 18px; border-right: 1px solid #e2e7e5; display: grid; align-content: center; gap: 8px; }
 .metrics article:last-child { border-right: 0; }
 .metrics span { color: #68756f; font-size: 11px; font-weight: 800; text-transform: uppercase; }

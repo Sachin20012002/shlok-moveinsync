@@ -125,6 +125,10 @@ def get_trip_dashboard(
             func.coalesce(func.sum(Trip.no_show_count), 0),
             func.count(Trip.id).filter(Trip.driver_non_compliance.is_(True)),
             func.count(Trip.id).filter(Trip.cab_non_compliance.is_(True)),
+            func.coalesce(
+                func.sum(Trip.employee_count).filter(and_(completed_condition, delayed_condition)),
+                0,
+            ),
         ).where(*filters)
     ).one()
     total_rows = int(summary[0] or 0)
@@ -171,6 +175,7 @@ def get_trip_dashboard(
             "noShows": int(summary[3] or 0),
             "driverNonCompliance": int(summary[4] or 0),
             "cabNonCompliance": int(summary[5] or 0),
+            "affectedEmployees": int(summary[6] or 0),
         },
         "facets": {
             "vendors": _facet(session, Trip.vendor_id, *date_only_filters),

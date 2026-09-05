@@ -1,9 +1,9 @@
 "use client";
 
-import { Activity, ArrowLeft, ArrowUpDown, Bot, Check, ChevronLeft, ChevronRight, Clock3, Database, Gauge, LoaderCircle, Route, ShieldAlert } from "lucide-react";
+import { Activity, ArrowLeft, ArrowUpDown, Bot, Check, ChevronLeft, ChevronRight, Clock3, Database, Download, Gauge, LoaderCircle, Mail, Route, Send, ShieldAlert, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { acknowledgeIncident, getIncidentEvents, getIncidents, getIncidentTrips, Incident, IncidentEvent, IncidentTripEvidence } from "../api/client";
+import { acknowledgeIncident, getIncidentEmailDraft, getIncidentEvents, getIncidents, getIncidentTrips, Incident, IncidentEmailDraft, IncidentEvent, IncidentTripEvidence, markIncidentEmailSent } from "../api/client";
 import { MobileNav } from "../components/mobile-nav";
 import styles from "./incidents.module.css";
 
@@ -21,6 +21,9 @@ export default function IncidentsPage() {
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortMode, setSortMode] = useState<SortMode>("created");
+  const [emailDraft, setEmailDraft] = useState<IncidentEmailDraft | null>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const filtered = incidents
@@ -29,6 +32,7 @@ export default function IncidentsPage() {
       ? Date.parse(right.createdAt) - Date.parse(left.createdAt)
       : SEVERITY_ORDER[right.severity] - SEVERITY_ORDER[left.severity] || Date.parse(right.createdAt) - Date.parse(left.createdAt));
   const selected = filtered.find((incident) => incident.id === selectedId) ?? filtered[0];
+  const emailSent = events.some((event) => event.eventType === "email_sent");
 
   async function loadIncidents() {
     try {
@@ -62,6 +66,7 @@ export default function IncidentsPage() {
   function selectIncident(id: number) {
     setSelectedId(id);
     setEvidencePage(1);
+    setEmailDraft(null);
     window.history.replaceState(null, "", `/incidents?incidentId=${id}`);
   }
 
@@ -73,6 +78,44 @@ export default function IncidentsPage() {
       await loadIncidents();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to acknowledge incident");
+    }
+  }
+
+  async function openEmailDraft() {
+    if (!selected) return;
+    setEmailLoading(true);
+    setError(null);
+    try {
+      setEmailDraft(await getIncidentEmailDraft(selected.id));
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to draft incident email");
+    } finally {
+      setEmailLoading(false);
+    }
+  }
+
+  function downloadEmailDraft() {
+    if (!emailDraft) return;
+    const content = `To: ${emailDraft.recipient}\nSubject: ${emailDraft.subject}\n\n${emailDraft.body}\n`;
+    const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = emailDraft.filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function sendEmail() {
+    if (!selected || emailSent) return;
+    setEmailSending(true);
+    setError(null);
+    try {
+      const event = await markIncidentEmailSent(selected.id);
+      setEvents((current) => current.some((item) => item.id === event.id) ? current : [...current, event]);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to mark email as sent");
+    } finally {
+      setEmailSending(false);
     }
   }
 
@@ -99,7 +142,7 @@ export default function IncidentsPage() {
 
         <section className={styles.workspace}>
           <div className={styles.list}>{loading ? <div className={styles.empty}><LoaderCircle className={styles.spin} size={24} /><strong>Loading incidents</strong><span>Retrieving the latest lifecycle state.</span></div> : filtered.length === 0 ? <div className={styles.empty}><ShieldAlert size={24} /><strong>No matching incidents</strong><span>Choose another status to continue reviewing.</span></div> : filtered.map((incident) => <button key={incident.id} className={selected?.id === incident.id ? styles.selected : ""} onClick={() => selectIncident(incident.id)}><span className={`${styles.severity} ${styles[incident.severity]}`}>{incident.severity}</span><strong>{incident.title}</strong><small>{incident.currentValue}% / {incident.slaValue}% SLA</small><em>{incident.status}</em></button>)}</div>
-          <article className={styles.detail}>{!selected ? <div className={styles.empty}><Activity size={24} /><strong>{loading ? "Loading incident" : "No incident selected"}</strong><span>{loading ? "Lifecycle details will appear shortly." : "Select an incident or choose another filter."}</span></div> : <><div className={styles.detailHead}><div><span className={`${styles.severity} ${styles[selected.severity]}`}>{selected.severity}</span><h2>{selected.title}</h2></div><strong>{selected.status}</strong></div><div className={styles.values}><div><span>Current</span><strong>{selected.currentValue}%</strong></div><div><span>Acknowledged at</span><strong>{selected.acknowledgedValue === null ? "Not yet" : `${selected.acknowledgedValue}%`}</strong></div><div><span>Notifications</span><strong>{selected.notificationCount}</strong></div></div><p className={styles.reason}>{selected.reason}</p><div className={styles.action}><span>Recommended action</span><p>{selected.recommendedAction}</p></div><div className={styles.detailActions}>{selected.attentionRequired && <button className={styles.ack} onClick={() => void acknowledge()}><Check size={17} /> {selected.status === "reopened" ? "Re-acknowledge" : "Acknowledge"}</button>}<Link className={styles.askAgent} href={`/agent?incidentId=${selected.id}`}><Bot size={17} /> Ask Mobility Agent</Link></div><div className={styles.history}><h3><Clock3 size={17} /> Lifecycle history</h3>{events.length === 0 ? <p className={styles.historyEmpty}>No lifecycle events recorded.</p> : events.map((event) => <div key={event.id} data-event={event.eventType}><Activity size={14} /><time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleString()}</time><strong>{event.eventType}</strong><p>{event.message}</p></div>)}</div></>}</article>
+          <article className={styles.detail}>{!selected ? <div className={styles.empty}><Activity size={24} /><strong>{loading ? "Loading incident" : "No incident selected"}</strong><span>{loading ? "Lifecycle details will appear shortly." : "Select an incident or choose another filter."}</span></div> : <><div className={styles.detailHead}><div><span className={`${styles.severity} ${styles[selected.severity]}`}>{selected.severity}</span><h2>{selected.title}</h2></div><strong>{selected.status}</strong></div><div className={styles.values}><div><span>Current</span><strong>{selected.currentValue}%</strong></div><div><span>Acknowledged at</span><strong>{selected.acknowledgedValue === null ? "Not yet" : `${selected.acknowledgedValue}%`}</strong></div><div><span>Notifications</span><strong>{selected.notificationCount}</strong></div></div><p className={styles.reason}>{selected.reason}</p><div className={styles.action}><span>Recommended action</span><p>{selected.recommendedAction}</p></div><div className={styles.detailActions}>{selected.attentionRequired && <button className={styles.ack} onClick={() => void acknowledge()}><Check size={17} /> {selected.status === "reopened" ? "Re-acknowledge" : "Acknowledge"}</button>}{selected.status === "acknowledged" && <button className={emailSent ? styles.emailSentButton : styles.draftEmail} onClick={() => void openEmailDraft()} disabled={emailLoading}>{emailLoading ? <LoaderCircle className={styles.spin} size={17} /> : emailSent ? <Check size={17} /> : <Mail size={17} />} {emailSent ? "Email sent" : "Draft email"}</button>}<Link className={styles.askAgent} href={`/agent?incidentId=${selected.id}`}><Bot size={17} /> Ask Mobility Agent</Link></div><div className={styles.history}><h3><Clock3 size={17} /> Lifecycle history</h3>{events.length === 0 ? <p className={styles.historyEmpty}>No lifecycle events recorded.</p> : events.map((event) => <div key={event.id} data-event={event.eventType}><Activity size={14} /><time dateTime={event.createdAt}>{new Date(event.createdAt).toLocaleString()}</time><strong>{event.eventType.replaceAll("_", " ")}</strong><p>{event.message}</p></div>)}</div></>}</article>
         </section>
 
         {selected && <section className={styles.evidencePanel} aria-label="Trips related to selected incident">
@@ -107,6 +150,7 @@ export default function IncidentsPage() {
           <div className={styles.evidenceTable}><table><thead><tr><th>Trip</th><th>Scheduled date</th><th>Issue</th><th>Delay</th><th>Vendor</th><th>Route</th><th>Shift</th><th>Employees</th></tr></thead><tbody>{evidenceLoading ? <tr><td colSpan={8} className={styles.tableMessage}><LoaderCircle className={styles.spin} size={20} /> Loading related trips</td></tr> : evidence.trips.length === 0 ? <tr><td colSpan={8} className={styles.tableMessage}>No directly related trips found.</td></tr> : evidence.trips.map((trip) => <tr key={trip.tripId}><td><strong>{trip.tripId}</strong></td><td>{new Date(trip.scheduledArrival).toLocaleDateString()}</td><td>{trip.delayReason ?? trip.issue}</td><td><span className={styles.delayBadge}>{trip.delayMinutes} min</span></td><td>{trip.vendorId}</td><td>{trip.routeId}</td><td>{trip.shiftId}</td><td>{trip.employeeCount}</td></tr>)}</tbody></table></div>
           <div className={styles.pagination}><span>Page {evidence.page} of {evidence.totalPages}</span><div><button onClick={() => setEvidencePage((current) => Math.max(1, current - 1))} disabled={evidenceLoading || evidence.page <= 1}><ChevronLeft size={16} /> Previous</button><button onClick={() => setEvidencePage((current) => Math.min(evidence.totalPages, current + 1))} disabled={evidenceLoading || evidence.page >= evidence.totalPages}>Next <ChevronRight size={16} /></button></div></div>
         </section>}
+        {emailDraft && <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setEmailDraft(null); }}><section className={styles.emailModal} role="dialog" aria-modal="true" aria-labelledby="email-draft-title"><header><div><p>ACKNOWLEDGED INCIDENT</p><h2 id="email-draft-title">Incident email draft</h2></div><button onClick={() => setEmailDraft(null)} title="Close email draft" aria-label="Close email draft"><X size={19} /></button></header><div className={styles.emailFields}><label>To<input value={emailDraft.recipient} onChange={(event) => setEmailDraft({ ...emailDraft, recipient: event.target.value })} /></label><label>Subject<input value={emailDraft.subject} onChange={(event) => setEmailDraft({ ...emailDraft, subject: event.target.value })} /></label><label>Message<textarea rows={14} value={emailDraft.body} onChange={(event) => setEmailDraft({ ...emailDraft, body: event.target.value })} /></label></div><footer><button className={styles.downloadDraft} onClick={downloadEmailDraft}><Download size={17} /> Download .txt</button><button className={emailSent ? styles.sentConfirmation : styles.sendEmail} onClick={() => void sendEmail()} disabled={emailSending || emailSent}>{emailSending ? <LoaderCircle className={styles.spin} size={17} /> : emailSent ? <Check size={17} /> : <Send size={17} />} {emailSent ? "Email sent" : "Send email"}</button></footer></section></div>}
       </main>
       <MobileNav active="incidents" />
     </div>

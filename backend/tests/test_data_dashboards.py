@@ -115,6 +115,7 @@ def test_data_dashboards_filter_and_paginate_database_rows() -> None:
             assert trips.status_code == 200
             assert trips.json()["summary"]["totalTrips"] == 1
             assert trips.json()["summary"]["delayedTrips"] == 1
+            assert trips.json()["summary"]["affectedEmployees"] == 3
             assert trips.json()["rows"][0]["delayReason"] == "TRAFFIC"
             assert trips.json()["pagination"]["totalRows"] == 1
             trip_export = client.get("/api/dashboards/trips/export", params={"delayed": "true"})

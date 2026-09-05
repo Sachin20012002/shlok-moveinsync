@@ -89,6 +89,15 @@ class IncidentEventResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
+class IncidentEmailDraftResponse(BaseModel):
+    recipient: str
+    subject: str
+    body: str
+    filename: str
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
 class TripExceptionResponse(BaseModel):
     trip_id: str = Field(alias="tripId")
     issue: str
