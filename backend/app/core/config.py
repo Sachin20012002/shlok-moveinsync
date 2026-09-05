@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_name: str = "SHLOK Mobility Intelligence"
-    database_url: str = "sqlite:///./mobility.db"
+    database_url: str
     allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     ota_sla: float = 90.0
     ota_grace_minutes: int = 5
