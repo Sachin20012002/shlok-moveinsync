@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: shlok-analytics-postgres
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    ports:
+      - "5433:5432"
+    volumes:
+      - shlok_analytics_data:/var/lib/postgresql/data
+      - ./migrations:/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  shlok_analytics_data:

@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE trips
+    ADD COLUMN IF NOT EXISTS distance_quality_issue VARCHAR NULL;
+
+COMMIT;
