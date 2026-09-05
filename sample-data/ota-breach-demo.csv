@@ -1,0 +1,13 @@
+trip_id,vendor_id,route_id,shift_id,employee_id,transport_mode,scheduled_arrival,actual_arrival,status,cost,distance_km,rating,gps_available
+TRIP-001,Vendor A,Route 12,Morning,EMP-001,cab,2026-09-04T09:00:00,2026-09-04T09:02:00,completed,420,18.4,4.5,true
+TRIP-002,Vendor A,Route 12,Morning,EMP-002,cab,2026-09-04T09:00:00,2026-09-04T09:03:00,completed,420,18.4,4.0,true
+TRIP-003,Vendor B,Route 08,Morning,EMP-003,nodal,2026-09-04T09:00:00,2026-09-04T09:05:00,completed,310,12.2,4.2,true
+TRIP-004,Vendor A,Route 12,Morning,EMP-004,cab,2026-09-04T09:00:00,2026-09-04T09:18:00,completed,440,18.9,3.1,true
+TRIP-005,Vendor C,Route 03,Morning,EMP-005,shuttle,2026-09-04T09:00:00,2026-09-04T08:58:00,completed,180,8.1,4.8,true
+TRIP-006,Vendor B,Route 08,Morning,EMP-006,nodal,2026-09-04T09:00:00,2026-09-04T09:04:00,completed,310,12.2,4.4,true
+TRIP-007,Vendor A,Route 12,Morning,EMP-007,cab,2026-09-04T09:00:00,2026-09-04T09:22:00,completed,450,19.1,2.8,false
+TRIP-008,Vendor C,Route 03,Morning,EMP-008,shuttle,2026-09-04T09:00:00,2026-09-04T09:01:00,completed,180,8.1,4.7,true
+TRIP-009,Vendor B,Route 08,Morning,EMP-009,nodal,2026-09-04T09:00:00,2026-09-04T09:05:00,completed,310,12.2,4.0,true
+TRIP-010,Vendor A,Route 12,Morning,EMP-010,cab,2026-09-04T09:00:00,2026-09-04T09:14:00,completed,430,18.7,3.0,true
+TRIP-011,Vendor C,Route 03,Morning,EMP-011,shuttle,2026-09-04T09:00:00,2026-09-04T09:00:00,completed,180,8.1,4.9,true
+TRIP-012,Vendor B,Route 08,Morning,EMP-012,nodal,2026-09-04T09:00:00,2026-09-04T09:03:00,completed,310,12.2,4.3,true

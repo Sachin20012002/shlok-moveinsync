@@ -6,9 +6,98 @@
 
 ## Overview
 
-Shared repository for Team SHLOK's MoveInSync hackathon project.
+Working first milestone for an agentic enterprise mobility layer. A transport manager can upload normalized trip data, inspect deterministic OTA metrics against a 90% SLA, review an automatically created incident, and acknowledge it.
 
-Architecture, implementation details, development setup, and documentation will be added as the project evolves.
+## Run Locally
+
+Prerequisites: Python 3.11+ and Node.js 20+.
+
+Open two PowerShell terminals from the repository root.
+
+Terminal 1, backend:
+
+```powershell
+Set-Location .\backend
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env -ErrorAction SilentlyContinue
+python -m uvicorn app.main:app --reload
+```
+
+Terminal 2, frontend:
+
+```powershell
+Set-Location .\frontend
+npm install
+Copy-Item .env.example .env.local -ErrorAction SilentlyContinue
+npm run dev
+```
+
+Open `http://localhost:3000`. Select **Upload trip CSV** and choose `sample-data/ota-breach-demo.csv`. The upload produces overall OTA, vendor OTA, and GPS availability incidents. Upload `sample-data/ota-breach-evening.csv` next to append another 12 trips and another set of incidents.
+
+To demonstrate re-notification on deterioration with a fresh database:
+
+1. Upload `sample-data/ota-breach-demo.csv`.
+2. Acknowledge the overall OTA incident at 75%.
+3. Upload `sample-data/ota-critical-deterioration.csv`.
+4. The same incident ID reopens at 37.5%, shows notification number 2, and requires acknowledgment again.
+
+Useful URLs:
+
+- Frontend: `http://localhost:3000`
+- Backend health: `http://localhost:8000/health`
+- Swagger API: `http://localhost:8000/docs`
+
+SQLite data is stored locally in `backend/mobility.db`. Uploads append to the database; the dashboard metrics represent the latest uploaded dataset while the incident queue retains incidents from every upload. CSV columns stay the same, but every row must have a globally unique `trip_id`.
+
+## Implemented API
+
+- `GET /health`
+- `POST /api/datasets/upload`
+- `GET /api/dashboard`
+- `GET /api/operations`
+- `GET /api/incidents`
+- `GET /api/incidents/{id}`
+- `GET /api/incidents/{id}/events`
+- `POST /api/incidents/{id}/acknowledge`
+
+## Operations Workspace
+
+The Operations page includes current mobility health, a five-item attention queue, live trip exceptions, shift readiness, a vendor watchlist, an operational timeline, data-quality status, and recommended actions. These views are computed from SQLite through `GET /api/operations`.
+
+The dedicated `/incidents` page contains all incident statuses, filters, acknowledgment controls, notification counts, and lifecycle history.
+
+## Mobility Agent
+
+The `/agent` workspace has two read-only scopes. **General** answers from the current operational snapshot, while **Incident** grounds the conversation in one selected incident's metric, SLA, severity, evidence, and recommended action. Incident details link directly to `/agent?incidentId={id}`. Conversations stream from `POST /api/agent/chat` using server-sent events and never mutate incident state.
+
+The default active response mode is deterministic `grounded-local`; no external model is used without credentials. An OpenAI-compatible provider or Sarvam can be enabled with `AI_PROVIDER`, `AI_API_KEY`, and `AI_BASE_URL`. The model is selected with `AI_MODEL`.
+
+Configured models can call read-only analytics tools backed by the same SQLite services as the API controllers. The catalog covers:
+
+- Trips: details, delayed trips, statistics, zero-delay dates, worst-delay days, and delay grouping by vendor, office, or shift.
+- Vendors: performance ranking, direct comparison, trip lookup, and issue summaries.
+- Safety: alert lookup and alert grouping by vendor, office, or shift.
+- Employees: delay impact and no-show statistics by office or shift.
+- Experience: overall feedback and feedback grouped by vendor or office.
+- Trends: previous-period and explicit period comparisons.
+
+Every registered tool is available through `POST /api/tools/{tool_name}` with its arguments as a JSON object. Existing focused `GET /api/tools/...` routes remain available. Dates are inclusive, bounded list tools report truncation, and analytical tools use the full loaded dataset when dates are omitted.
+
+The startup reference-data sync links matching records from the MoveInSync ride, alert, and feedback exports into SQLite. Zero-valued feedback is excluded from rating averages and reported as such. Peer comparison returns an explicit unavailable result until an external benchmark dataset is configured.
+
+## Calculation Rules
+
+- The OTA SLA is 90%.
+- Arrival up to and including five minutes late is on time.
+- OTA is evaluated only after at least 10 completed trips.
+- Duplicate open OTA incidents are prevented.
+- Incident identity is scoped by operational rule, such as overall OTA or a specific vendor's OTA. New trip batches update the active incident instead of creating duplicates.
+- A dataset can create overall OTA, vendor OTA, and GPS availability incidents.
+- Acknowledged incidents reopen after a five percentage-point deterioration or severity escalation.
+- Incident events record opening, acknowledgment, reopening/escalation, and recovery.
+- Python remains the source of truth for official metrics; agent responses are advisory and grounded in those calculations.
 
 ## Team SHLOK
 

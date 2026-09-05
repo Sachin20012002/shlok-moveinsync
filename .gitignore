@@ -9,6 +9,26 @@ Desktop.ini
 *.swp
 *~
 
+# Python
+__pycache__/
+*.py[cod]
+*.db
+
+# Python virtual environments
+.venv/
+venv/
+
+# Node.js
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
 # Local environment and secrets
 .env
 .env.*
@@ -18,3 +38,6 @@ Desktop.ini
 *.log
 tmp/
 temp/
+
+# Local datasets
+*.csv
