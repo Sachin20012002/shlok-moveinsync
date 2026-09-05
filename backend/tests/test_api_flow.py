@@ -1,5 +1,6 @@
 import csv
 import io
+from datetime import datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -228,5 +229,47 @@ def test_acknowledged_incident_reopens_and_can_be_acknowledged_again() -> None:
             assert reacknowledged["status"] == "acknowledged"
             assert reacknowledged["acknowledgedValue"] == 37.5
             assert reacknowledged["attentionRequired"] is False
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_upload_accepts_moveinsync_ride_export() -> None:
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+
+    def test_database():
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_db] = test_database
+    ride_csv = """business_unit,office,product_type,trip_date,shift_type,trip_id,trip_direction,actual_escort,vendor_id,planned_cab_registration,actual_cab_registration,actual_cab_capacity,planned_km,traveled_km,planned_start_epoch,planned_end_epoch,actual_start_epoch,actual_end_epoch,delay_reason,delay_minutes,route_source,actual_cab_fuel_type,is_driver_nc,is_cab_nc,trip_nodal,plannedemployee_cnt,actualemployee_cnt,noshow_cnt
+vanta-Aus,Cedar Ridge Office,CAB,"May 1, 2026",00:15,"1,097,357",LOGOUT,false,Sneha Mikhailov Travel,TSC 921 GP,TSC 921 GP,3,27.92,26.9,"1,777,595,400","1,777,598,280","1,777,594,061","1,777,597,937",NODELAY,0,AUTO,Diesel,false,false,NA,2,2,0
+"""
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/datasets/upload",
+                files={"file": ("rides.csv", ride_csv, "text/csv")},
+            )
+            assert response.status_code == 201
+            assert response.json()["validRows"] == 1
+
+        with Session(engine) as session:
+            trip = session.scalar(select(Trip))
+            assert trip is not None
+            assert trip.trip_id == "1097357"
+            assert trip.vendor_id == "Sneha Mikhailov Travel"
+            assert trip.route_id == "Unavailable"
+            assert trip.shift_id == "00:15"
+            assert trip.employee_count == 2
+            assert trip.transport_mode == "CAB"
+            assert trip.distance_km == 26.9
+            assert trip.gps_available is None
+            assert trip.scheduled_arrival == datetime(2026, 5, 1, 1, 18)
     finally:
         app.dependency_overrides.clear()

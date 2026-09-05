@@ -1,6 +1,7 @@
 :root {
   --background: #f4f6f3;
   --foreground: #18221f;
+  --focus: #15795d;
 }
 
 html {
@@ -13,11 +14,21 @@ body {
   overflow-x: hidden;
 }
 
+::selection {
+  color: #10251f;
+  background: #9fe0c2;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
 body {
   min-height: 100%;
   color: var(--foreground);
   background: var(--background);
-  font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+  font-family: "Trebuchet MS", "Avenir Next", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

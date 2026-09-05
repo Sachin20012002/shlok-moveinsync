@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     vendor_minimum_completed_trips: int = 3
     gps_availability_sla: float = 95.0
     incident_reopen_drop_points: float = 5.0
+    ai_api_key: str | None = None
+    ai_base_url: str = "https://api.openai.com/v1"
+    ai_model: str = "gpt-4o-mini"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

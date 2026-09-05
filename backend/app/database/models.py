@@ -27,6 +27,7 @@ class Trip(Base):
     route_id: Mapped[str] = mapped_column(String(100), index=True)
     shift_id: Mapped[str] = mapped_column(String(100), index=True)
     employee_id: Mapped[str] = mapped_column(String(100), index=True)
+    employee_count: Mapped[int] = mapped_column(Integer, default=1)
     transport_mode: Mapped[str] = mapped_column(String(50))
     scheduled_arrival: Mapped[datetime] = mapped_column(DateTime)
     actual_arrival: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

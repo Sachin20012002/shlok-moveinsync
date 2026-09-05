@@ -44,6 +44,7 @@ export type UploadResult = {
 export type Operations = {
   activeTrips: number;
   maximumDelayMinutes: number | null;
+  totalTripExceptions: number;
   tripExceptions: Array<{
     tripId: string;
     issue: string;
@@ -52,7 +53,12 @@ export type Operations = {
     vendorId: string;
     routeId: string;
     employeeId: string;
+    employeeCount: number;
     recommendedAction: string;
+  }>;
+  incidentTripCounts: Array<{
+    incidentId: number;
+    count: number;
   }>;
   shiftReadiness: Array<{
     shiftId: string;
@@ -77,6 +83,8 @@ export type Operations = {
     createdAt: string;
   }>;
   dataQuality: {
+    sourceFile: string | null;
+    importedRows: number;
     missingGps: number;
     missingArrivals: number;
     invalidRows: number;
@@ -99,14 +107,32 @@ export type IncidentEvent = {
   createdAt: string;
 };
 
+export type AgentMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AgentContext = {
+  mode: "model" | "grounded-local";
+  model: string | null;
+  scope: "general" | "incident";
+  incidentId: number | null;
+  incidentTitle: string | null;
+  sourceFile: string | null;
+  completedTrips: number;
+  attentionIncidents: number;
+};
+
 export const EMPTY_OPERATIONS: Operations = {
   activeTrips: 0,
   maximumDelayMinutes: null,
+  totalTripExceptions: 0,
   tripExceptions: [],
+  incidentTripCounts: [],
   shiftReadiness: [],
   vendorWatchlist: [],
   timeline: [],
-  dataQuality: { missingGps: 0, missingArrivals: 0, invalidRows: 0, skippedRows: 0, lastDataUpdate: null },
+  dataQuality: { sourceFile: null, importedRows: 0, missingGps: 0, missingArrivals: 0, invalidRows: 0, skippedRows: 0, lastDataUpdate: null },
   recommendedActions: [],
 };
 
@@ -145,4 +171,47 @@ export async function getIncidents(): Promise<Incident[]> {
 
 export async function getIncidentEvents(id: number): Promise<IncidentEvent[]> {
   return request<IncidentEvent[]>(`/api/incidents/${id}/events`);
+}
+
+export async function streamAgent(
+  message: string,
+  history: AgentMessage[],
+  incidentId: number | null,
+  handlers: {
+    onContext: (context: AgentContext) => void;
+    onToken: (content: string) => void;
+  },
+  signal?: AbortSignal,
+): Promise<void> {
+  const response = await fetch(`${API_URL}/api/agent/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history, incidentId }),
+    signal,
+  });
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { detail?: string } | null;
+    throw new Error(payload?.detail ?? `Agent request failed with status ${response.status}`);
+  }
+  if (!response.body) throw new Error("Agent stream is unavailable");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, "\n");
+    const frames = buffer.split("\n\n");
+    buffer = frames.pop() ?? "";
+    for (const frame of frames) {
+      const event = frame.match(/^event: (.+)$/m)?.[1];
+      const data = frame.match(/^data: (.+)$/m)?.[1];
+      if (!event || !data) continue;
+      const payload = JSON.parse(data) as AgentContext & { content?: string; message?: string; ok?: boolean };
+      if (event === "context") handlers.onContext(payload);
+      if (event === "token" && payload.content) handlers.onToken(payload.content);
+      if (event === "error") throw new Error(payload.message ?? "Agent stream failed");
+    }
+    if (done) break;
+  }
 }

@@ -12,15 +12,24 @@ INCIDENT_COLUMNS = {
     "attention_required": "BOOLEAN DEFAULT 1",
 }
 
+TRIP_COLUMNS = {
+    "employee_count": "INTEGER DEFAULT 1",
+}
+
 
 def migrate_database(engine: Engine) -> None:
     Base.metadata.create_all(engine)
     if engine.dialect.name != "sqlite":
         return
 
-    existing = {column["name"] for column in inspect(engine).get_columns("incidents")}
+    inspector = inspect(engine)
+    existing = {column["name"] for column in inspector.get_columns("incidents")}
+    existing_trip_columns = {column["name"] for column in inspector.get_columns("trips")}
     added_lifecycle_columns = False
     with engine.begin() as connection:
+        for name, definition in TRIP_COLUMNS.items():
+            if name not in existing_trip_columns:
+                connection.execute(text(f"ALTER TABLE trips ADD COLUMN {name} {definition}"))
         for name, definition in INCIDENT_COLUMNS.items():
             if name not in existing:
                 connection.execute(text(f"ALTER TABLE incidents ADD COLUMN {name} {definition}"))
@@ -40,3 +49,4 @@ def migrate_database(engine: Engine) -> None:
                 "last_notified_at = COALESCE(last_notified_at, created_at)"
             )
         )
+        connection.execute(text("UPDATE trips SET employee_count = COALESCE(employee_count, 1)"))

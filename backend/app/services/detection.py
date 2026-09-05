@@ -187,7 +187,7 @@ def evaluate_operations(
         and (trip.actual_arrival - trip.scheduled_arrival).total_seconds() / 60
         > settings.ota_grace_minutes
     ]
-    affected_employees = len({trip.employee_id for trip in delayed})
+    affected_employees = sum(trip.employee_count for trip in delayed)
     session.add(
         MetricSnapshot(
             dataset_upload_id=dataset_upload_id,
@@ -205,7 +205,7 @@ def evaluate_operations(
     top_route = Counter(trip.route_id for trip in delayed).most_common(1)
     top_shift = Counter(trip.shift_id for trip in delayed).most_common(1)
     vendor = top_vendor[0][0] if top_vendor else None
-    missing_gps = sum(trip.gps_available is not True for trip in completed)
+    missing_gps = sum(trip.gps_available is False for trip in completed)
     warning = f"GPS unavailable for {missing_gps} completed trip(s)." if missing_gps else None
 
     if metrics.on_time_arrival is not None:
@@ -244,7 +244,7 @@ def evaluate_operations(
             title=f"{vendor_id} on-time arrival below SLA",
             current_value=vendor_metrics.on_time_arrival,
             sla_value=settings.ota_sla,
-            affected_employees=len({trip.employee_id for trip in vendor_delayed}),
+            affected_employees=sum(trip.employee_count for trip in vendor_delayed),
             contributing_vendor=vendor_id,
             contributing_route=Counter(trip.route_id for trip in vendor_delayed).most_common(1)[0][0] if vendor_delayed else None,
             contributing_shift=Counter(trip.shift_id for trip in vendor_delayed).most_common(1)[0][0] if vendor_delayed else None,
@@ -254,9 +254,15 @@ def evaluate_operations(
         if notified and notified_incident is None:
             notified_incident = incident
 
-    if completed:
-        gps_available = sum(trip.gps_available is True for trip in completed)
-        gps_value = round((gps_available / len(completed)) * 100, 2)
+    gps_observations = [trip for trip in completed if trip.gps_available is not None]
+    if gps_observations:
+        gps_available = sum(trip.gps_available is True for trip in gps_observations)
+        gps_value = round((gps_available / len(gps_observations)) * 100, 2)
+        gps_affected_employees = sum(
+            trip.employee_count
+            for trip in gps_observations
+            if trip.gps_available is False
+        )
         incident, notified = _apply_signal(
             session,
             settings,
@@ -264,8 +270,8 @@ def evaluate_operations(
             title="GPS availability below target",
             current_value=gps_value,
             sla_value=settings.gps_availability_sla,
-            affected_employees=len(completed) - gps_available,
-            reason=f"GPS is available for {gps_available} of {len(completed)} completed trips.",
+            affected_employees=gps_affected_employees,
+            reason=f"GPS is available for {gps_available} of {len(gps_observations)} observed trips.",
             recommended_action="Verify device connectivity and follow up on trips without GPS evidence.",
             data_quality_warning=warning,
         )

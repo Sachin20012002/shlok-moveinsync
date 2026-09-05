@@ -3,6 +3,7 @@ from datetime import datetime
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
@@ -10,7 +11,8 @@ from app.core.config import get_settings
 from app.database.connection import SessionLocal, engine, get_db
 from app.database.migrations import migrate_database
 from app.database.models import DatasetUpload, Incident, IncidentEvent, MetricSnapshot
-from app.schemas.api import DashboardResponse, IncidentEventResponse, IncidentResponse, OperationsResponse, UploadResponse
+from app.schemas.api import DashboardResponse, IncidentEventResponse, IncidentResponse, MobilityAgentRequest, OperationsResponse, UploadResponse
+from app.services.agent import build_agent_context, stream_agent_response
 from app.services.ingestion import ingest_csv
 from app.services.detection import evaluate_operations
 from app.services.operations import build_operations_response
@@ -55,7 +57,7 @@ def health() -> dict[str, str]:
 
 
 @app.post("/api/datasets/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
-async def upload_dataset(
+def upload_dataset(
     file: UploadFile = File(...),
     session: Session = Depends(get_db),
 ) -> UploadResponse:
@@ -65,7 +67,7 @@ async def upload_dataset(
         upload, incident_created = ingest_csv(
             session,
             file.filename,
-            await file.read(),
+            file.file,
             settings,
         )
     except ValueError as error:
@@ -124,6 +126,30 @@ def get_dashboard(session: Session = Depends(get_db)) -> DashboardResponse:
 @app.get("/api/operations", response_model=OperationsResponse)
 def get_operations(session: Session = Depends(get_db)) -> OperationsResponse:
     return build_operations_response(session, settings)
+
+
+@app.post("/api/agent/chat")
+def chat_with_mobility_agent(
+    request: MobilityAgentRequest,
+    session: Session = Depends(get_db),
+) -> StreamingResponse:
+    message = request.message.strip()
+    if not message:
+        raise HTTPException(status_code=422, detail="Message cannot be empty")
+    request.message = message
+    try:
+        context = build_agent_context(session, settings, request.incidentId)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    return StreamingResponse(
+        stream_agent_response(request, context, settings),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.get("/api/incidents", response_model=list[IncidentResponse])

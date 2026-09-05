@@ -9,6 +9,7 @@ class TripRow(BaseModel):
     route_id: str
     shift_id: str
     employee_id: str
+    employee_count: int = 1
     transport_mode: str
     scheduled_arrival: datetime
     actual_arrival: datetime | None
@@ -39,3 +40,10 @@ class TripRow(BaseModel):
     @classmethod
     def blank_is_none(cls, value: object) -> object:
         return None if value == "" else value
+
+    @field_validator("employee_count")
+    @classmethod
+    def require_positive_employee_count(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("employee_count cannot be negative")
+        return value

@@ -1,0 +1,65 @@
+.shell { min-height: 100vh; display: grid; grid-template-columns: 220px minmax(0, 1fr); color: #18221f; background-color: #f4f6f3; background-image: linear-gradient(#dfe5df 1px, transparent 1px), linear-gradient(90deg, #dfe5df 1px, transparent 1px); background-size: 40px 40px; }
+.sidebar { position: fixed; z-index: 10; inset: 0 auto 0 0; width: 220px; height: 100dvh; overflow-y: auto; padding: 28px 18px; color: #edf5f1; background: #152723; display: flex; flex-direction: column; border-right: 1px solid #29433d; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 0 10px 30px; letter-spacing: .08em; }
+.brand span { width: 34px; height: 34px; display: grid; place-items: center; color: #152723; background: #9fe0c2; font: 800 12px/1 "Trebuchet MS", sans-serif; }
+.brand strong { font-size: 18px; }
+.sidebar nav { display: grid; gap: 4px; }
+.sidebar nav a, .sidebar nav button { display: flex; align-items: center; gap: 11px; width: 100%; padding: 11px 12px; color: #aebfba; border: 0; border-radius: 4px; background: transparent; text-align: left; text-decoration: none; cursor: pointer; }
+.sidebar nav a:hover, .sidebar nav .navActive { color: #fff; background: #26443d; }
+.sidebar nav button:disabled { color: #70847e; cursor: not-allowed; }
+.sidebar nav a:focus-visible { outline-color: #9fe0c2; outline-offset: -2px; }
+.persona { margin-top: auto; padding: 14px 12px; border-top: 1px solid #365149; display: grid; gap: 4px; }
+.persona span { color: #8fa39d; font-size: 11px; text-transform: uppercase; }
+.persona strong { font-size: 13px; }
+.page { grid-column: 2; min-width: 0; height: 100vh; padding: 30px clamp(18px, 4vw, 58px) 24px; display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 14px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.header p { color: #537168; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.header h1 { margin-top: 4px; font: 700 clamp(30px, 4vw, 42px)/1.05 Georgia, serif; }
+.header > div > span { display: block; margin-top: 7px; color: #62716c; font-size: 14px; }
+.mode { display: flex; align-items: center; gap: 8px; padding: 8px 11px; border: 1px solid #c9d4cf; border-radius: 4px; background: #fff; color: #53645e; font-size: 11px; font-weight: 800; }
+.mode > span { width: 8px; height: 8px; border-radius: 50%; }
+.local { background: #d29624; }
+.live { background: #1f8b68; box-shadow: 0 0 0 3px #dff4e9; }
+.scopeBar { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.scopeToggle { flex: 0 0 auto; display: flex; padding: 3px; border: 1px solid #c7d2cd; border-radius: 5px; background: #e9eeeb; }
+.scopeToggle button { min-width: 82px; padding: 7px 12px; color: #5c6d67; border: 0; border-radius: 3px; background: transparent; font-size: 12px; font-weight: 800; cursor: pointer; }
+.scopeToggle button:disabled { cursor: default; opacity: .55; }
+.scopeToggle .scopeActive { color: #fff; background: #243e37; box-shadow: 0 1px 4px rgba(24, 43, 37, .2); }
+.scopeBar label { min-width: 0; display: flex; align-items: center; gap: 9px; }
+.scopeBar label span { flex: 0 0 auto; color: #65756f; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.scopeBar select { min-width: 0; max-width: 460px; height: 36px; padding: 0 30px 0 10px; color: #263a33; border: 1px solid #b9c8c2; border-radius: 4px; background: #fff; font-weight: 700; }
+.workspace { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 280px; border: 1px solid #cbd4d0; background: #fff; box-shadow: 0 8px 28px rgba(28, 51, 44, .08); }
+.conversation { min-height: 0; overflow-y: auto; padding: 24px clamp(18px, 3vw, 34px); scroll-behavior: smooth; }
+.agentMessage, .userMessage { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; max-width: 780px; margin-bottom: 24px; }
+.userMessage { margin-left: auto; }
+.avatar { width: 34px; height: 34px; display: grid; place-items: center; color: #1f6b55; border: 1px solid #bcd0c8; border-radius: 4px; background: #edf6f2; }
+.userMessage .avatar { color: #fff; border-color: #324f47; background: #243e37; }
+.agentMessage > div:last-child, .userMessage > div:last-child { min-width: 0; }
+.agentMessage span, .userMessage span { color: #5d7069; font-size: 10px; font-weight: 900; text-transform: uppercase; }
+.agentMessage p, .userMessage p { margin-top: 7px; padding: 14px 16px; border: 1px solid #dce4e0; border-radius: 3px; background: #f8faf9; white-space: pre-wrap; line-height: 1.6; }
+.userMessage p { color: #fff; border-color: #243e37; background: #243e37; }
+.agentMessage small { display: block; margin-top: 6px; color: #7b8984; font-size: 10px; }
+.error { margin: 10px 46px; padding: 12px 14px; color: #8a2e2c; border: 1px solid #e1b4af; background: #fff0ee; }
+.contextPanel { min-width: 0; padding: 22px; border-left: 1px solid #dce4e0; background: #f7faf8; }
+.contextHeading { display: flex; align-items: center; gap: 9px; padding-bottom: 17px; border-bottom: 1px solid #dce4e0; color: #1f6b55; }
+.contextHeading div { display: grid; gap: 3px; }
+.contextHeading strong { color: #233730; font-size: 13px; }
+.contextHeading span { color: #71807b; font-size: 10px; }
+.contextPanel dl { display: grid; }
+.contextPanel dl > div { padding: 14px 0; border-bottom: 1px solid #e2e8e5; }
+.contextPanel dt { color: #6c7c76; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.contextPanel dd { margin-top: 5px; overflow-wrap: anywhere; color: #253830; font-size: 12px; font-weight: 700; }
+.contextPanel > p { margin-top: 18px; color: #65756f; font-size: 11px; line-height: 1.55; }
+.composerArea { max-width: 960px; width: 100%; margin: 0 auto; }
+.suggestions { display: flex; gap: 7px; margin-bottom: 10px; overflow-x: auto; padding: 2px; }
+.suggestions button { flex: 0 0 auto; padding: 8px 11px; color: #38574d; border: 1px solid #bdccc6; border-radius: 4px; background: #fff; font-size: 11px; cursor: pointer; }
+.suggestions button:hover { border-color: #1f6b55; background: #f0f7f4; }
+.composer { display: grid; grid-template-columns: minmax(0, 1fr) 46px; align-items: end; gap: 10px; padding: 10px; border: 1px solid #9db0a9; border-radius: 6px; background: #fff; box-shadow: 0 8px 24px rgba(28, 51, 44, .1); }
+.composer:focus-within { border-color: #1f6b55; box-shadow: 0 0 0 3px rgba(31, 107, 85, .12), 0 8px 24px rgba(28, 51, 44, .1); }
+.composer textarea { width: 100%; max-height: 130px; resize: none; padding: 5px; border: 0; outline: 0; color: #20332c; background: transparent; line-height: 1.45; }
+.composer button { width: 42px; height: 42px; display: grid; place-items: center; color: #fff; border: 0; border-radius: 4px; background: #1f6b55; cursor: pointer; }
+.composer button:disabled { color: #82918c; background: #e0e7e3; cursor: default; }
+.disclaimer { margin-top: 7px; color: #74827d; text-align: center; font-size: 10px; }
+@media (max-width: 980px) { .shell { grid-template-columns: 72px minmax(0, 1fr); } .sidebar { width: 72px; padding-inline: 12px; } .brand strong, .sidebar nav a:not(.navActive), .sidebar nav button, .persona { display: none; } .brand { padding-inline: 6px; } .sidebar nav a { justify-content: center; } .workspace { grid-template-columns: minmax(0, 1fr) 220px; } }
+@media (max-width: 720px) { .contextPanel { display: none; } .workspace { grid-template-columns: 1fr; } }
+@media (max-width: 640px) { .shell { display: block; } .sidebar { position: static; width: 100%; height: 58px; padding: 10px 16px; flex-direction: row; align-items: center; } .brand { padding: 0; } .brand span { width: 32px; height: 32px; } .sidebar nav { display: none; } .page { height: calc(100dvh - 58px); padding: 18px 12px 88px; gap: 10px; } .header h1 { font-size: 28px; } .header > div > span { display: none; } .mode { max-width: 132px; text-align: right; } .scopeBar { align-items: stretch; flex-direction: column; gap: 7px; } .scopeToggle button { flex: 1; } .scopeBar label { display: block; } .scopeBar label span { display: none; } .scopeBar select { width: 100%; max-width: none; } .conversation { padding: 18px 12px; } .agentMessage, .userMessage { grid-template-columns: 30px minmax(0, 1fr); gap: 8px; margin-bottom: 18px; } .avatar { width: 30px; height: 30px; } .agentMessage p, .userMessage p { padding: 12px; font-size: 13px; } .composerArea { min-width: 0; } .suggestions { margin-bottom: 7px; } .composer { grid-template-columns: minmax(0, 1fr) 42px; } .disclaimer { display: none; } }

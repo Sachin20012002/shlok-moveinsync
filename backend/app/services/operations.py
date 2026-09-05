@@ -8,6 +8,9 @@ from app.database.models import DatasetUpload, Incident, IncidentEvent, Trip
 from app.schemas.api import OperationsResponse
 
 
+EXCEPTION_SAMPLE_SIZE = 50
+
+
 def _delay_minutes(trip: Trip) -> float | None:
     if trip.actual_arrival is None:
         return None
@@ -31,7 +34,16 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
         if trip.status == "completed" and trip.actual_arrival is not None
     ]
 
-    exceptions = []
+    exception_samples: dict[int | None, list[dict[str, object]]] = defaultdict(list)
+    incident_trip_counts: dict[int, int] = defaultdict(int)
+    total_trip_exceptions = 0
+
+    def add_sample(bucket: int | None, exception: dict[str, object]) -> None:
+        sample = exception_samples[bucket]
+        sample.append(exception)
+        sample.sort(key=lambda item: float(item["delayMinutes"] or 0), reverse=True)
+        del sample[EXCEPTION_SAMPLE_SIZE:]
+
     for trip in trips:
         delay = _delay_minutes(trip)
         issues = []
@@ -46,31 +58,45 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
             ):
                 if incident_type in active_incidents:
                     related_incident_ids.append(active_incidents[incident_type])
-        if trip.gps_available is not True:
+        if trip.gps_available is False:
             issues.append("GPS unavailable")
             gps_incident_id = active_incidents.get("gps_availability_below_sla")
             if gps_incident_id is not None:
                 related_incident_ids.append(gps_incident_id)
         if issues:
-            exceptions.append(
-                {
-                    "tripId": trip.trip_id,
-                    "issue": " · ".join(issues),
-                    "delayMinutes": delay,
-                    "relatedIncidentIds": related_incident_ids,
-                    "vendorId": trip.vendor_id,
-                    "routeId": trip.route_id,
-                    "employeeId": trip.employee_id,
-                    "recommendedAction": (
-                        "Contact vendor and verify arrival"
-                        if trip.actual_arrival is None
-                        else "Verify device connectivity"
-                        if trip.gps_available is not True and (delay or 0) <= settings.ota_grace_minutes
-                        else "Review route execution with vendor"
-                    ),
-                }
-            )
-    exceptions.sort(key=lambda item: item["delayMinutes"] or 0, reverse=True)
+            exception = {
+                "tripId": trip.trip_id,
+                "issue": " · ".join(issues),
+                "delayMinutes": delay,
+                "relatedIncidentIds": related_incident_ids,
+                "vendorId": trip.vendor_id,
+                "routeId": trip.route_id,
+                "employeeId": trip.employee_id,
+                "employeeCount": trip.employee_count,
+                "recommendedAction": (
+                    "Contact vendor and verify arrival"
+                    if trip.actual_arrival is None
+                    else "Verify device connectivity"
+                    if trip.gps_available is False and (delay or 0) <= settings.ota_grace_minutes
+                    else "Review route execution with vendor"
+                ),
+            }
+            total_trip_exceptions += 1
+            add_sample(None, exception)
+            for incident_id in related_incident_ids:
+                incident_trip_counts[incident_id] += 1
+                add_sample(incident_id, exception)
+
+    exceptions_by_trip_id = {
+        str(exception["tripId"]): exception
+        for samples in exception_samples.values()
+        for exception in samples
+    }
+    exceptions = sorted(
+        exceptions_by_trip_id.values(),
+        key=lambda item: float(item["delayMinutes"] or 0),
+        reverse=True,
+    )
 
     shifts: dict[str, list[Trip]] = defaultdict(list)
     vendors: dict[str, list[Trip]] = defaultdict(list)
@@ -94,7 +120,7 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
                 "completedTrips": len(shift_completed),
                 "delayedTrips": len(shift_delayed),
                 "missingArrivals": missing_arrivals,
-                "affectedEmployees": len({trip.employee_id for trip in shift_delayed}),
+                "affectedEmployees": sum(trip.employee_count for trip in shift_delayed),
                 "status": readiness,
             }
         )
@@ -109,7 +135,7 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
             for trip in vendor_completed
         )
         ota = round(((len(vendor_completed) - delayed_count) / len(vendor_completed)) * 100, 2)
-        missing_gps = sum(trip.gps_available is not True for trip in vendor_completed)
+        missing_gps = sum(trip.gps_available is False for trip in vendor_completed)
         vendor_incidents = sum(
             incident.contributing_vendor == vendor_id and incident.attention_required
             for incident in incidents
@@ -142,7 +168,12 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
             for trip in trips
         ),
         maximum_delay_minutes=max((_delay_minutes(trip) or 0 for trip in completed), default=None),
+        total_trip_exceptions=total_trip_exceptions,
         trip_exceptions=exceptions,
+        incident_trip_counts=[
+            {"incidentId": incident_id, "count": count}
+            for incident_id, count in incident_trip_counts.items()
+        ],
         shift_readiness=shift_readiness,
         vendor_watchlist=vendor_watchlist[:6],
         timeline=[
@@ -156,7 +187,9 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
             for event, title in event_rows
         ],
         data_quality={
-            "missingGps": sum(trip.gps_available is not True for trip in trips),
+            "sourceFile": latest_upload.filename if latest_upload else None,
+            "importedRows": latest_upload.valid_rows if latest_upload else 0,
+            "missingGps": sum(trip.gps_available is False for trip in trips),
             "missingArrivals": sum(trip.actual_arrival is None for trip in trips),
             "invalidRows": sum(upload.invalid_rows for upload in session.scalars(select(DatasetUpload))),
             "skippedRows": sum(upload.skipped_rows for upload in session.scalars(select(DatasetUpload))),

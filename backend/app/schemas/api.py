@@ -1,5 +1,4 @@
 from datetime import datetime
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -79,7 +78,15 @@ class TripExceptionResponse(BaseModel):
     vendor_id: str = Field(alias="vendorId")
     route_id: str = Field(alias="routeId")
     employee_id: str = Field(alias="employeeId")
+    employee_count: int = Field(alias="employeeCount")
     recommended_action: str = Field(alias="recommendedAction")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class IncidentTripCountResponse(BaseModel):
+    incident_id: int = Field(alias="incidentId")
+    count: int
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -116,6 +123,8 @@ class TimelineEventResponse(BaseModel):
 
 
 class DataQualityResponse(BaseModel):
+    source_file: str | None = Field(alias="sourceFile")
+    imported_rows: int = Field(alias="importedRows")
     missing_gps: int = Field(alias="missingGps")
     missing_arrivals: int = Field(alias="missingArrivals")
     invalid_rows: int = Field(alias="invalidRows")
@@ -137,7 +146,9 @@ class RecommendedActionResponse(BaseModel):
 class OperationsResponse(BaseModel):
     active_trips: int = Field(alias="activeTrips")
     maximum_delay_minutes: float | None = Field(alias="maximumDelayMinutes")
+    total_trip_exceptions: int = Field(alias="totalTripExceptions")
     trip_exceptions: list[TripExceptionResponse] = Field(alias="tripExceptions")
+    incident_trip_counts: list[IncidentTripCountResponse] = Field(alias="incidentTripCounts")
     shift_readiness: list[ShiftReadinessResponse] = Field(alias="shiftReadiness")
     vendor_watchlist: list[VendorWatchResponse] = Field(alias="vendorWatchlist")
     timeline: list[TimelineEventResponse]
@@ -145,3 +156,14 @@ class OperationsResponse(BaseModel):
     recommended_actions: list[RecommendedActionResponse] = Field(alias="recommendedActions")
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class AgentMessage(BaseModel):
+    role: str
+    content: str
+
+
+class MobilityAgentRequest(BaseModel):
+    message: str
+    history: list[AgentMessage] = Field(default_factory=list)
+    incidentId: int | None = None

@@ -38,3 +38,6 @@ next-env.d.ts
 *.log
 tmp/
 temp/
+
+# Local datasets
+*.csv

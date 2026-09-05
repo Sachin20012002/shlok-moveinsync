@@ -68,6 +68,12 @@ The Operations page includes current mobility health, a five-item attention queu
 
 The dedicated `/incidents` page contains all incident statuses, filters, acknowledgment controls, notification counts, and lifecycle history.
 
+## Mobility Agent
+
+The `/agent` workspace has two read-only scopes. **General** answers from the current operational snapshot, while **Incident** grounds the conversation in one selected incident's metric, SLA, severity, evidence, and recommended action. Incident details link directly to `/agent?incidentId={id}`. Conversations stream from `POST /api/agent/chat` using server-sent events and never mutate incident state.
+
+The default active response mode is deterministic `grounded-local`; no external model is used without credentials. An OpenAI-compatible provider can be enabled with `AI_API_KEY` and `AI_BASE_URL`. Its configured default model is `gpt-4o-mini`, overridable with `AI_MODEL`.
+
 ## Calculation Rules
 
 - The OTA SLA is 90%.
@@ -78,7 +84,7 @@ The dedicated `/incidents` page contains all incident statuses, filters, acknowl
 - A dataset can create overall OTA, vendor OTA, and GPS availability incidents.
 - Acknowledged incidents reopen after a five percentage-point deterioration or severity escalation.
 - Incident events record opening, acknowledgment, reopening/escalation, and recovery.
-- Python calculates official metrics; AI is intentionally deferred until this core flow is stable.
+- Python remains the source of truth for official metrics; agent responses are advisory and grounded in those calculations.
 
 ## Team SHLOK
 
