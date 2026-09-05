@@ -6,6 +6,7 @@ from datetime import datetime
 class TripTiming:
     scheduled_arrival: datetime
     actual_arrival: datetime
+    reported_delay_minutes: float | None = None
 
 
 @dataclass(frozen=True)
@@ -24,13 +25,20 @@ def calculate_ota(
 ) -> OtaMetrics:
     completed_trips = len(trips)
     delays = [
-        max(
-            0.0,
-            (trip.actual_arrival - trip.scheduled_arrival).total_seconds() / 60,
+        (
+            max(0.0, trip.reported_delay_minutes)
+            if trip.reported_delay_minutes is not None
+            else max(
+                0.0,
+                (trip.actual_arrival - trip.scheduled_arrival).total_seconds() / 60,
+            )
         )
         for trip in trips
     ]
-    delayed_trips = sum(delay > grace_minutes for delay in delays)
+    delayed_trips = sum(
+        delay > (0 if trip.reported_delay_minutes is not None else grace_minutes)
+        for trip, delay in zip(trips, delays, strict=True)
+    )
 
     if completed_trips < minimum_trips:
         return OtaMetrics(
@@ -44,7 +52,11 @@ def calculate_ota(
         ((completed_trips - delayed_trips) / completed_trips) * 100,
         2,
     )
-    late_delays = [delay for delay in delays if delay > grace_minutes]
+    late_delays = [
+        delay
+        for trip, delay in zip(trips, delays, strict=True)
+        if delay > (0 if trip.reported_delay_minutes is not None else grace_minutes)
+    ]
     average_delay_minutes = (
         round(sum(late_delays) / len(late_delays), 2) if late_delays else 0.0
     )

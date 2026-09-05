@@ -48,6 +48,9 @@ def build_agent_context(
             .limit(8)
         )
     )
+    attention_incidents = session.scalar(
+        select(func.count()).select_from(Incident).where(Incident.attention_required.is_(True))
+    ) or 0
     completed_trips = snapshot.completed_trips if snapshot else session.scalar(
         select(func.count()).select_from(Trip).where(Trip.status == "completed")
     ) or 0
@@ -62,7 +65,7 @@ def build_agent_context(
         affected_employees=snapshot.affected_employees if snapshot else 0,
         ota=snapshot.ota_value if snapshot else None,
         ota_sla=snapshot.sla_value if snapshot else settings.ota_sla,
-        attention_incidents=len(incidents),
+        attention_incidents=attention_incidents,
         top_incidents=[] if selected else [
             {
                 "id": incident.id,

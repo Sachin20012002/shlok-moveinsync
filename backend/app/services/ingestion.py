@@ -61,6 +61,7 @@ def _moveinsync_trip(raw_row: dict[str, str | None]) -> TripRow:
         distance_km=_number(raw_row.get("traveled_km") or ""),
         gps_available=None,
         delay_reason=raw_row.get("delay_reason"),
+        reported_delay_minutes=_number(raw_row.get("delay_minutes") or ""),
         driver_non_compliance=raw_row.get("is_driver_nc"),
         cab_non_compliance=raw_row.get("is_cab_nc"),
     )

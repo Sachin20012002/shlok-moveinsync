@@ -273,6 +273,7 @@ vanta-Aus,Cedar Ridge Office,CAB,"May 1, 2026",00:15,"1,097,357",LOGOUT,false,Sn
             assert trip.distance_km == 26.9
             assert trip.gps_available is None
             assert trip.delay_reason == "NODELAY"
+            assert trip.reported_delay_minutes == 0
             assert trip.driver_non_compliance is False
             assert trip.cab_non_compliance is False
             assert trip.scheduled_arrival == datetime(2026, 5, 1, 1, 18)

@@ -38,7 +38,12 @@ async def lifespan(_: FastAPI):
         latest_dataset_id = session.scalar(
             select(DatasetUpload.id).order_by(desc(DatasetUpload.id)).limit(1)
         )
-        if latest_dataset_id is not None:
+        snapshot_exists = latest_dataset_id is not None and session.scalar(
+            select(func.count())
+            .select_from(MetricSnapshot)
+            .where(MetricSnapshot.dataset_upload_id == latest_dataset_id)
+        )
+        if latest_dataset_id is not None and not snapshot_exists:
             evaluate_operations(session, latest_dataset_id, settings)
     yield
 

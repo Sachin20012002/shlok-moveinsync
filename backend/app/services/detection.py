@@ -171,7 +171,11 @@ def evaluate_operations(
         )
     )
     timings = {
-        trip.id: TripTiming(trip.scheduled_arrival, trip.actual_arrival)
+        trip.id: TripTiming(
+            trip.scheduled_arrival,
+            trip.actual_arrival,
+            trip.reported_delay_minutes,
+        )
         for trip in completed
         if trip.actual_arrival is not None
     }
@@ -184,8 +188,12 @@ def evaluate_operations(
         trip
         for trip in completed
         if trip.actual_arrival is not None
-        and (trip.actual_arrival - trip.scheduled_arrival).total_seconds() / 60
-        > settings.ota_grace_minutes
+        and (
+            trip.reported_delay_minutes > 0
+            if trip.reported_delay_minutes is not None
+            else (trip.actual_arrival - trip.scheduled_arrival).total_seconds() / 60
+            > settings.ota_grace_minutes
+        )
     ]
     affected_employees = sum(trip.employee_count for trip in delayed)
     session.add(

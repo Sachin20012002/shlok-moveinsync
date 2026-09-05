@@ -209,6 +209,8 @@ def _trips_in_range(
 
 
 def _delay_minutes(trip: Trip) -> float | None:
+    if trip.reported_delay_minutes is not None:
+        return max(trip.reported_delay_minutes, 0)
     if trip.actual_arrival is None:
         return None
     return max((trip.actual_arrival - trip.scheduled_arrival).total_seconds() / 60, 0)
@@ -216,7 +218,8 @@ def _delay_minutes(trip: Trip) -> float | None:
 
 def _is_delayed(trip: Trip, settings: Settings) -> bool:
     delay = _delay_minutes(trip)
-    return trip.status == "completed" and delay is not None and delay > settings.ota_grace_minutes
+    threshold = 0 if trip.reported_delay_minutes is not None else settings.ota_grace_minutes
+    return trip.status == "completed" and delay is not None and delay > threshold
 
 
 def get_trip_summary(
@@ -450,17 +453,32 @@ def _joined_alerts(
     payload: dict[str, object],
 ) -> tuple[date | None, date | None, list[tuple[SafetyAlert, Trip]]]:
     start_date, end_date = _payload_dates(payload)
-    resolved_start, resolved_end, trips = _trips_in_range(session, start_date, end_date)
-    trip_map = {trip.trip_id: trip for trip in _filter_trips(trips, payload)}
-    if not trip_map:
-        return resolved_start, resolved_end, []
-    alerts = list(session.scalars(select(SafetyAlert).where(SafetyAlert.trip_id.in_(trip_map))))
-    joined = [(alert, trip_map[alert.trip_id]) for alert in alerts]
+    resolved = _resolve_range(session, start_date, end_date)
+    if resolved is None:
+        return None, None, []
+    resolved_start, resolved_end = resolved
+    statement = (
+        select(SafetyAlert, Trip)
+        .join(Trip, Trip.trip_id == SafetyAlert.trip_id)
+        .where(
+            Trip.scheduled_arrival >= datetime.combine(resolved_start, time.min),
+            Trip.scheduled_arrival < datetime.combine(resolved_end + timedelta(days=1), time.min),
+        )
+    )
+    for argument, column in {
+        "vendor_id": Trip.vendor_id,
+        "office_id": Trip.office_id,
+        "shift_id": Trip.shift_id,
+    }.items():
+        if requested := payload.get(argument):
+            statement = statement.where(func.lower(column) == str(requested).lower())
     if severity := payload.get("severity"):
-        joined = [row for row in joined if (row[0].severity or "").lower() == str(severity).lower()]
+        statement = statement.where(func.lower(SafetyAlert.severity) == str(severity).lower())
     if state := payload.get("state"):
-        joined = [row for row in joined if row[0].state.lower() == str(state).lower()]
-    joined.sort(key=lambda row: row[0].started_at, reverse=True)
+        statement = statement.where(func.lower(SafetyAlert.state) == str(state).lower())
+    joined = list(session.execute(statement.order_by(SafetyAlert.started_at.desc())).all())
+    if not joined:
+        return resolved_start, resolved_end, []
     return resolved_start, resolved_end, joined
 
 
@@ -540,12 +558,29 @@ def _joined_feedback(
     payload: dict[str, object],
 ) -> tuple[date | None, date | None, list[tuple[TripFeedback, Trip]]]:
     start_date, end_date = _payload_dates(payload)
-    resolved_start, resolved_end, trips = _trips_in_range(session, start_date, end_date)
-    trip_map = {trip.trip_id: trip for trip in _filter_trips(trips, payload)}
-    if not trip_map:
+    resolved = _resolve_range(session, start_date, end_date)
+    if resolved is None:
+        return None, None, []
+    resolved_start, resolved_end = resolved
+    statement = (
+        select(TripFeedback, Trip)
+        .join(Trip, Trip.trip_id == TripFeedback.trip_id)
+        .where(
+            Trip.scheduled_arrival >= datetime.combine(resolved_start, time.min),
+            Trip.scheduled_arrival < datetime.combine(resolved_end + timedelta(days=1), time.min),
+        )
+    )
+    for argument, column in {
+        "vendor_id": Trip.vendor_id,
+        "office_id": Trip.office_id,
+        "shift_id": Trip.shift_id,
+    }.items():
+        if requested := payload.get(argument):
+            statement = statement.where(func.lower(column) == str(requested).lower())
+    joined = list(session.execute(statement).all())
+    if not joined:
         return resolved_start, resolved_end, []
-    feedback = list(session.scalars(select(TripFeedback).where(TripFeedback.trip_id.in_(trip_map))))
-    return resolved_start, resolved_end, [(item, trip_map[item.trip_id]) for item in feedback]
+    return resolved_start, resolved_end, joined
 
 
 def _rating_summary(feedback: list[TripFeedback]) -> dict[str, object]:

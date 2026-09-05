@@ -21,6 +21,7 @@ class TripRow(BaseModel):
     rating: float | None = None
     gps_available: bool | None = None
     delay_reason: str | None = None
+    reported_delay_minutes: float | None = None
     driver_non_compliance: bool | None = None
     cab_non_compliance: bool | None = None
 
@@ -49,6 +50,7 @@ class TripRow(BaseModel):
         "gps_available",
         "office_id",
         "delay_reason",
+        "reported_delay_minutes",
         "driver_non_compliance",
         "cab_non_compliance",
         mode="before",

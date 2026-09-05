@@ -18,7 +18,7 @@ class DatasetUpload(Base):
 
 
 class Trip(Base):
-    __tablename__ = "trips"
+    __tablename__ = "shlok_trips"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     dataset_upload_id: Mapped[int] = mapped_column(ForeignKey("dataset_uploads.id"))
@@ -39,12 +39,13 @@ class Trip(Base):
     rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     gps_available: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     delay_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    reported_delay_minutes: Mapped[float | None] = mapped_column(Float, nullable=True)
     driver_non_compliance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     cab_non_compliance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
 
 class SafetyAlert(Base):
-    __tablename__ = "safety_alerts"
+    __tablename__ = "shlok_safety_alerts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     trip_id: Mapped[str] = mapped_column(String(100), index=True)
@@ -59,7 +60,7 @@ class SafetyAlert(Base):
 
 
 class TripFeedback(Base):
-    __tablename__ = "trip_feedback"
+    __tablename__ = "shlok_trip_feedback"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     trip_id: Mapped[str] = mapped_column(String(100), index=True)
