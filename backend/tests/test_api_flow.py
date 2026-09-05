@@ -75,11 +75,33 @@ def test_upload_to_acknowledgment_flow() -> None:
             )
             assert overall_incident["severity"] == "critical"
 
+            blocked_draft = client.get(
+                f"/api/incidents/{overall_incident['id']}/email-draft"
+            )
+            assert blocked_draft.status_code == 409
+
             acknowledged = client.post(
                 f"/api/incidents/{overall_incident['id']}/acknowledge"
             ).json()
             assert acknowledged["status"] == "acknowledged"
             assert client.get("/api/dashboard").json()["activeIncidentCount"] == 2
+
+            draft = client.get(
+                f"/api/incidents/{overall_incident['id']}/email-draft"
+            )
+            assert draft.status_code == 200
+            assert draft.json()["subject"] == "Action required: On-time arrival below SLA"
+            assert "Current performance is 75.0% against the 90.0% SLA." in draft.json()["body"]
+
+            first_sent = client.post(
+                f"/api/incidents/{overall_incident['id']}/email-sent"
+            )
+            second_sent = client.post(
+                f"/api/incidents/{overall_incident['id']}/email-sent"
+            )
+            assert first_sent.status_code == 200
+            assert first_sent.json()["eventType"] == "email_sent"
+            assert second_sent.json()["id"] == first_sent.json()["id"]
     finally:
         app.dependency_overrides.clear()
 

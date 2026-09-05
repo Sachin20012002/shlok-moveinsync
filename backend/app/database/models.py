@@ -31,15 +31,15 @@ class Trip(Base):
     office_id: Mapped[str | None] = mapped_column(String(150), nullable=True, index=True)
     no_show_count: Mapped[int] = mapped_column(Integer, default=0)
     transport_mode: Mapped[str] = mapped_column(String(50))
-    scheduled_arrival: Mapped[datetime] = mapped_column(DateTime)
+    scheduled_arrival: Mapped[datetime] = mapped_column(DateTime, index=True)
     actual_arrival: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(50), index=True)
     cost: Mapped[float | None] = mapped_column(Float, nullable=True)
     distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     gps_available: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    delay_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    reported_delay_minutes: Mapped[float | None] = mapped_column(Float, nullable=True)
+    delay_reason: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    reported_delay_minutes: Mapped[float | None] = mapped_column(Float, nullable=True, index=True)
     driver_non_compliance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     cab_non_compliance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
@@ -56,7 +56,7 @@ class SafetyAlert(Base):
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     state: Mapped[str] = mapped_column(String(30), index=True)
     severity: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
-    source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    source: Mapped[str | None] = mapped_column(String(50), nullable=True, index=True)
 
 
 class TripFeedback(Base):
@@ -65,7 +65,7 @@ class TripFeedback(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     trip_id: Mapped[str] = mapped_column(String(100), index=True)
     employee_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
-    trip_type: Mapped[str] = mapped_column(String(20))
+    trip_type: Mapped[str] = mapped_column(String(20), index=True)
     trip_at: Mapped[datetime] = mapped_column(DateTime, index=True)
     route_rating: Mapped[int] = mapped_column(Integer)
     driver_rating: Mapped[int] = mapped_column(Integer)

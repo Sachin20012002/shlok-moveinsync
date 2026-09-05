@@ -107,6 +107,48 @@ export type IncidentEvent = {
   createdAt: string;
 };
 
+export type IncidentEmailDraft = {
+  recipient: string;
+  subject: string;
+  body: string;
+  filename: string;
+};
+
+export type PerformanceSummary = {
+  completedTrips: number;
+  delayedTrips: number;
+  ota: number | null;
+  affectedEmployees: number;
+  averageDelayMinutes: number;
+};
+
+export type OperationsAnalytics = {
+  availableRange: { startDate: string | null; endDate: string | null };
+  selectedRange: { startDate: string | null; endDate: string | null };
+  summary: PerformanceSummary;
+  vendorPerformance: Array<PerformanceSummary & { vendorId: string }>;
+  shiftPerformance: Array<PerformanceSummary & { shiftId: string }>;
+  weeklyTrend: Array<PerformanceSummary & { weekStart: string; changePoints: number | null }>;
+};
+
+export type IncidentTripEvidence = {
+  totalTrips: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  trips: Array<{
+    tripId: string;
+    scheduledArrival: string;
+    vendorId: string;
+    routeId: string;
+    shiftId: string;
+    employeeCount: number;
+    delayMinutes: number;
+    delayReason: string | null;
+    issue: string;
+  }>;
+};
+
 export type AgentMessage = {
   role: "user" | "assistant";
   content: string;
@@ -122,6 +164,22 @@ export type AgentContext = {
   completedTrips: number;
   attentionIncidents: number;
 };
+
+export type DataDashboardKind = "trips" | "feedback" | "safety-alerts";
+
+export type DataDashboard = {
+  summary: Record<string, number | null>;
+  facets: Record<string, string[]>;
+  rows: Array<Record<string, string | number | boolean | null>>;
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalRows: number;
+    totalPages: number;
+  };
+};
+
+export type DashboardQuery = Record<string, string | number | boolean | null | undefined>;
 
 export const EMPTY_OPERATIONS: Operations = {
   activeTrips: 0,
@@ -155,6 +213,31 @@ export async function getOperations(): Promise<Operations> {
   return request<Operations>("/api/operations");
 }
 
+export async function getOperationsAnalytics(startDate?: string, endDate?: string): Promise<OperationsAnalytics> {
+  const params = new URLSearchParams();
+  if (startDate) params.set("startDate", startDate);
+  if (endDate) params.set("endDate", endDate);
+  return request<OperationsAnalytics>(`/api/operations/analytics?${params.toString()}`);
+}
+
+export async function getDataDashboard(kind: DataDashboardKind, query: DashboardQuery): Promise<DataDashboard> {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== null && value !== undefined && value !== "") params.set(key, String(value));
+  });
+  return request<DataDashboard>(`/api/dashboards/${kind}?${params.toString()}`);
+}
+
+export function getDataDashboardExportUrl(kind: DataDashboardKind, query: DashboardQuery): string {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (key !== "page" && key !== "pageSize" && value !== null && value !== undefined && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+  return `${API_URL}/api/dashboards/${kind}/export?${params.toString()}`;
+}
+
 export async function uploadDataset(file: File): Promise<UploadResult> {
   const body = new FormData();
   body.append("file", file);
@@ -171,6 +254,18 @@ export async function getIncidents(): Promise<Incident[]> {
 
 export async function getIncidentEvents(id: number): Promise<IncidentEvent[]> {
   return request<IncidentEvent[]>(`/api/incidents/${id}/events`);
+}
+
+export async function getIncidentEmailDraft(id: number): Promise<IncidentEmailDraft> {
+  return request<IncidentEmailDraft>(`/api/incidents/${id}/email-draft`);
+}
+
+export async function markIncidentEmailSent(id: number): Promise<IncidentEvent> {
+  return request<IncidentEvent>(`/api/incidents/${id}/email-sent`, { method: "POST" });
+}
+
+export async function getIncidentTrips(id: number, page = 1, pageSize = 25): Promise<IncidentTripEvidence> {
+  return request<IncidentTripEvidence>(`/api/incidents/${id}/related-trips?page=${page}&pageSize=${pageSize}`);
 }
 
 export async function getAgentStatus(): Promise<Pick<AgentContext, "mode" | "model">> {
