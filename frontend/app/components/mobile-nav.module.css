@@ -13,10 +13,10 @@
     grid-template-columns: repeat(3, 1fr);
     min-height: 62px;
     padding: 6px;
-    border: 1px solid #29433d;
+    border: 1px solid #c8d8f3;
     border-radius: 8px;
-    background: rgba(21, 39, 35, .97);
-    box-shadow: 0 12px 32px rgba(11, 28, 23, .28);
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 12px 32px rgba(46, 83, 153, .2);
     backdrop-filter: blur(14px);
   }
 
@@ -26,7 +26,7 @@
     justify-content: center;
     gap: 8px;
     min-width: 0;
-    color: #aebfba;
+    color: #617696;
     border-radius: 5px;
     text-decoration: none;
     font-size: 12px;
@@ -34,8 +34,8 @@
   }
 
   .nav .active {
-    color: #10251f;
-    background: #9fe0c2;
+    color: #fff;
+    background: #4d77e8;
   }
 
   .nav a:focus-visible {

@@ -1,7 +1,7 @@
 :root {
-  --background: #f4f6f3;
-  --foreground: #18221f;
-  --focus: #15795d;
+  --background: #eef4ff;
+  --foreground: #1e3152;
+  --focus: #3f6fe5;
 }
 
 html {
@@ -15,8 +15,8 @@ body {
 }
 
 ::selection {
-  color: #10251f;
-  background: #9fe0c2;
+  color: #fff;
+  background: #7fa4ff;
 }
 
 :focus-visible {
@@ -28,7 +28,7 @@ body {
   min-height: 100%;
   color: var(--foreground);
   background: var(--background);
-  font-family: "Trebuchet MS", "Avenir Next", sans-serif;
+  font-family: "Aptos", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

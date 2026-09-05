@@ -31,6 +31,7 @@ export default function AgentPage() {
   const [input, setInput] = useState("");
   const [context, setContext] = useState<AgentContext | null>(null);
   const [scope, setScope] = useState<AgentScope>("general");
+  const [openedFromIncident, setOpenedFromIncident] = useState(false);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(null);
   const [streaming, setStreaming] = useState(false);
@@ -44,10 +45,13 @@ export default function AgentPage() {
       setIncidents(next);
       const queryId = Number(new URLSearchParams(window.location.search).get("incidentId"));
       const linkedIncident = next.find((incident) => incident.id === queryId);
-      setSelectedIncidentId(linkedIncident?.id ?? next[0]?.id ?? null);
       if (linkedIncident) {
+        setOpenedFromIncident(true);
+        setSelectedIncidentId(linkedIncident.id);
         setScope("incident");
         setMessages([INCIDENT_WELCOME]);
+      } else {
+        setSelectedIncidentId(null);
       }
     }).catch((requestError) => setError(requestError instanceof Error ? requestError.message : "Unable to load incidents"));
   }, []);
@@ -139,9 +143,9 @@ export default function AgentPage() {
         <section className={styles.scopeBar} aria-label="Agent scope">
           <div className={styles.scopeToggle}>
             <button className={scope === "general" ? styles.scopeActive : ""} onClick={() => changeScope("general")} disabled={streaming}>General</button>
-            <button className={scope === "incident" ? styles.scopeActive : ""} onClick={() => changeScope("incident")} disabled={streaming || incidents.length === 0}>Incident</button>
+            {openedFromIncident && <button className={scope === "incident" ? styles.scopeActive : ""} onClick={() => changeScope("incident")} disabled={streaming || selectedIncidentId === null}>Issue context</button>}
           </div>
-          {scope === "incident" && <label><span>Selected incident</span><select value={selectedIncidentId ?? ""} onChange={(event) => changeScope("incident", Number(event.target.value))} disabled={streaming}>{incidents.map((incident) => <option value={incident.id} key={incident.id}>#{incident.id} · {incident.title}</option>)}</select></label>}
+          {scope === "incident" && selectedIncident && <div className={styles.issueContext} aria-label="Current issue context"><span className={`${styles.issueSeverity} ${styles[selectedIncident.severity]}`}>{selectedIncident.severity}</span><div><small>Current issue</small><strong>{selectedIncident.title}</strong></div></div>}
         </section>
 
         <section className={styles.workspace}>
