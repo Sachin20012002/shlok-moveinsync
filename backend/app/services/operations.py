@@ -12,12 +12,21 @@ EXCEPTION_SAMPLE_SIZE = 50
 
 
 def _delay_minutes(trip: Trip) -> float | None:
+    if trip.reported_delay_minutes is not None:
+        return round(max(0.0, trip.reported_delay_minutes), 2)
     if trip.actual_arrival is None:
         return None
     return round(
         max(0.0, (trip.actual_arrival - trip.scheduled_arrival).total_seconds() / 60),
         2,
     )
+
+
+def _is_delayed(trip: Trip, settings: Settings) -> bool:
+    delay = _delay_minutes(trip)
+    if delay is None:
+        return False
+    return delay > (0 if trip.reported_delay_minutes is not None else settings.ota_grace_minutes)
 
 
 def build_operations_response(session: Session, settings: Settings) -> OperationsResponse:
@@ -33,6 +42,7 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
         trip for trip in trips
         if trip.status == "completed" and trip.actual_arrival is not None
     ]
+    completed_ids = {trip.id for trip in completed}
 
     exception_samples: dict[int | None, list[dict[str, object]]] = defaultdict(list)
     incident_trip_counts: dict[int, int] = defaultdict(int)
@@ -50,7 +60,7 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
         related_incident_ids = []
         if trip.actual_arrival is None:
             issues.append("Arrival missing")
-        elif delay is not None and delay > settings.ota_grace_minutes:
+        elif _is_delayed(trip, settings):
             issues.append(f"{delay:g} min late")
             for incident_type in (
                 "ota_below_sla",
@@ -77,7 +87,7 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
                     "Contact vendor and verify arrival"
                     if trip.actual_arrival is None
                     else "Verify device connectivity"
-                    if trip.gps_available is False and (delay or 0) <= settings.ota_grace_minutes
+                    if trip.gps_available is False and not _is_delayed(trip, settings)
                     else "Review route execution with vendor"
                 ),
             }
@@ -106,10 +116,10 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
 
     shift_readiness = []
     for shift_id, shift_trips in sorted(shifts.items()):
-        shift_completed = [trip for trip in shift_trips if trip in completed]
+        shift_completed = [trip for trip in shift_trips if trip.id in completed_ids]
         shift_delayed = [
             trip for trip in shift_completed
-            if (_delay_minutes(trip) or 0) > settings.ota_grace_minutes
+            if _is_delayed(trip, settings)
         ]
         missing_arrivals = sum(trip.actual_arrival is None for trip in shift_trips)
         delayed_ratio = len(shift_delayed) / len(shift_completed) if shift_completed else 0
@@ -127,11 +137,11 @@ def build_operations_response(session: Session, settings: Settings) -> Operation
 
     vendor_watchlist = []
     for vendor_id, vendor_trips in sorted(vendors.items()):
-        vendor_completed = [trip for trip in vendor_trips if trip in completed]
+        vendor_completed = [trip for trip in vendor_trips if trip.id in completed_ids]
         if not vendor_completed:
             continue
         delayed_count = sum(
-            (_delay_minutes(trip) or 0) > settings.ota_grace_minutes
+            _is_delayed(trip, settings)
             for trip in vendor_completed
         )
         ota = round(((len(vendor_completed) - delayed_count) / len(vendor_completed)) * 100, 2)

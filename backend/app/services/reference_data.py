@@ -290,20 +290,39 @@ def _import_feedback(session: Session, data_dir: Path, trip_ids: set[str]) -> in
 
 def sync_reference_data(session: Session, directory: str | None) -> dict[str, int]:
     imported_trips = _import_database_trips(session)
-    trip_ids = dict(session.execute(select(Trip.trip_id, Trip.id)).all())
-    if not trip_ids:
+    trip_count = session.scalar(select(func.count()).select_from(Trip)) or 0
+    if not trip_count:
         return {"importedTrips": 0, "enrichedTrips": 0, "alerts": 0, "feedback": 0}
     data_dir = Path(directory).resolve() if directory else None
     has_csv_data = data_dir is not None and data_dir.is_dir()
+    needs_enrichment = has_csv_data and bool(session.scalar(
+        select(func.count()).select_from(Trip).where(Trip.office_id.is_(None))
+    ))
+    needs_delay_backfill = bool(session.scalar(
+        select(func.count()).select_from(Trip).where(Trip.reported_delay_minutes.is_(None))
+    ))
+    needs_alerts = not bool(session.scalar(select(func.count()).select_from(SafetyAlert)))
+    needs_feedback = not bool(session.scalar(select(func.count()).select_from(TripFeedback)))
+    if not any((needs_enrichment, needs_delay_backfill, needs_alerts, needs_feedback)):
+        return {
+            "importedTrips": imported_trips,
+            "enrichedTrips": 0,
+            "backfilledDelays": 0,
+            "alerts": 0,
+            "feedback": 0,
+        }
+
+    trip_ids = dict(session.execute(select(Trip.trip_id, Trip.id)).all())
     result = {
         "importedTrips": imported_trips,
-        "enrichedTrips": _enrich_trips(session, data_dir, trip_ids) if has_csv_data else 0,
-        "backfilledDelays": _backfill_database_delays(session),
-        "alerts": _import_database_alerts(session, set(trip_ids)),
-        "feedback": _import_database_feedback(session, set(trip_ids)),
+        "enrichedTrips": _enrich_trips(session, data_dir, trip_ids) if needs_enrichment else 0,
+        "backfilledDelays": _backfill_database_delays(session) if needs_delay_backfill else 0,
+        "alerts": _import_database_alerts(session, set(trip_ids)) if needs_alerts else 0,
+        "feedback": _import_database_feedback(session, set(trip_ids)) if needs_feedback else 0,
     }
-    if has_csv_data:
+    if has_csv_data and needs_alerts:
         result["alerts"] += _import_alerts(session, data_dir, set(trip_ids))
+    if has_csv_data and needs_feedback:
         result["feedback"] += _import_feedback(session, data_dir, set(trip_ids))
     session.commit()
     return result

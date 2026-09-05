@@ -147,12 +147,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function getWorkspace(): Promise<[Dashboard, Incident[], Operations]> {
-  return Promise.all([
-    request<Dashboard>("/api/dashboard"),
-    request<Incident[]>("/api/incidents"),
-    request<Operations>("/api/operations"),
-  ]);
+export async function getDashboard(): Promise<Dashboard> {
+  return request<Dashboard>("/api/dashboard");
+}
+
+export async function getOperations(): Promise<Operations> {
+  return request<Operations>("/api/operations");
 }
 
 export async function uploadDataset(file: File): Promise<UploadResult> {

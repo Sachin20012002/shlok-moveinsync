@@ -3,7 +3,7 @@
 import { Activity, AlertTriangle, ArrowUpRight, Bot, Building2, Check, ChevronRight, Clock3, Database, Gauge, LoaderCircle, MapPin, RefreshCw, Route, ShieldAlert, Upload, Users } from "lucide-react";
 import { ChangeEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { acknowledgeIncident, Dashboard, EMPTY_OPERATIONS, getWorkspace, Incident, Operations, uploadDataset, UploadResult } from "./api/client";
+import { acknowledgeIncident, Dashboard, EMPTY_OPERATIONS, getDashboard, getIncidents, getOperations, Incident, Operations, uploadDataset, UploadResult } from "./api/client";
 import { MobileNav } from "./components/mobile-nav";
 import styles from "./page.module.css";
 
@@ -37,12 +37,14 @@ export default function Home() {
   async function refresh() {
     setError(null);
     try {
-      const [nextDashboard, nextIncidents, nextOperations] = await getWorkspace();
+      const operationsRequest = getOperations();
+      const [nextDashboard, nextIncidents] = await Promise.all([getDashboard(), getIncidents()]);
       setDashboard(nextDashboard);
       setIncidents(nextIncidents);
-      setOperations(nextOperations);
       const nextPriority = nextIncidents.filter((incident) => incident.attentionRequired);
       setSelectedId((current) => nextPriority.some((item) => item.id === current) ? current : (nextPriority[0]?.id ?? null));
+      setLoading(false);
+      setOperations(await operationsRequest);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : "Unable to reach the backend");
     } finally {
@@ -111,7 +113,7 @@ export default function Home() {
           {loading ? Array.from({ length: 4 }, (_, index) => <article className={styles.metricSkeleton} key={index}><span /><strong /><p /></article>) : <>
             <article className={styles.otaMetric}><div className={styles.metricLabel}><Activity size={18} /> On-time arrival</div><div className={styles.otaRow}><strong>{displayValue(dashboard.onTimeArrival.value, "%")}</strong><span className={dashboard.onTimeArrival.status === "healthy" ? styles.healthy : styles.breach}>SLA {dashboard.onTimeArrival.sla}%</span></div><p>{dashboard.onTimeArrival.previousValue === null ? "Historical comparison unavailable" : `Previous period ${dashboard.onTimeArrival.previousValue}%`}</p></article>
             <article><div className={styles.metricLabel}><Route size={18} /> Completed trips</div><strong>{dashboard.completedTrips}</strong><p>Eligible for OTA</p></article>
-            <article><div className={styles.metricLabel}><Clock3 size={18} /> Delayed trips</div><strong>{dashboard.delayedTrips}</strong><p>Over 5 minutes late</p></article>
+            <article><div className={styles.metricLabel}><Clock3 size={18} /> Delayed trips</div><strong>{dashboard.delayedTrips}</strong><p>Reported delay above 0 min</p></article>
             <article><div className={styles.metricLabel}><Users size={18} /> Employees affected</div><strong>{dashboard.affectedEmployees}</strong><p>{displayValue(dashboard.averageDelayMinutes, " min avg delay")}</p></article>
           </>}
         </section>
