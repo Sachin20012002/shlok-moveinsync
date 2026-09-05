@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -18,6 +19,24 @@ class DashboardResponse(BaseModel):
     affected_employees: int = Field(alias="affectedEmployees")
     average_delay_minutes: float | None = Field(alias="averageDelayMinutes")
     active_incident_count: int = Field(alias="activeIncidentCount")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class PaginationResponse(BaseModel):
+    page: int
+    page_size: int = Field(alias="pageSize")
+    total_rows: int = Field(alias="totalRows")
+    total_pages: int = Field(alias="totalPages")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class DataDashboardResponse(BaseModel):
+    summary: dict[str, int | float | None]
+    facets: dict[str, list[str]]
+    rows: list[dict[str, Any]]
+    pagination: PaginationResponse
 
     model_config = ConfigDict(populate_by_name=True)
 
@@ -154,6 +173,44 @@ class OperationsResponse(BaseModel):
     timeline: list[TimelineEventResponse]
     data_quality: DataQualityResponse = Field(alias="dataQuality")
     recommended_actions: list[RecommendedActionResponse] = Field(alias="recommendedActions")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class DateRangeResponse(BaseModel):
+    start_date: str | None = Field(alias="startDate")
+    end_date: str | None = Field(alias="endDate")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class PerformanceSummaryResponse(BaseModel):
+    completed_trips: int = Field(alias="completedTrips")
+    delayed_trips: int = Field(alias="delayedTrips")
+    ota: float | None
+    affected_employees: int = Field(alias="affectedEmployees")
+    average_delay_minutes: float = Field(alias="averageDelayMinutes")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class OperationsAnalyticsResponse(BaseModel):
+    available_range: DateRangeResponse = Field(alias="availableRange")
+    selected_range: DateRangeResponse = Field(alias="selectedRange")
+    summary: PerformanceSummaryResponse
+    vendor_performance: list[dict[str, Any]] = Field(alias="vendorPerformance")
+    shift_performance: list[dict[str, Any]] = Field(alias="shiftPerformance")
+    weekly_trend: list[dict[str, Any]] = Field(alias="weeklyTrend")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class IncidentTripEvidenceResponse(BaseModel):
+    total_trips: int = Field(alias="totalTrips")
+    page: int
+    page_size: int = Field(alias="pageSize")
+    total_pages: int = Field(alias="totalPages")
+    trips: list[dict[str, Any]]
 
     model_config = ConfigDict(populate_by_name=True)
 

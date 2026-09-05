@@ -2,7 +2,7 @@ import json
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, func, select
@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.database.connection import SessionLocal, engine, get_db
 from app.database.migrations import migrate_database
 from app.database.models import DatasetUpload, Incident, IncidentEvent, MetricSnapshot
-from app.schemas.api import DashboardResponse, IncidentEventResponse, IncidentResponse, MobilityAgentRequest, OperationsResponse, UploadResponse
+from app.schemas.api import DataDashboardResponse, DashboardResponse, IncidentEventResponse, IncidentResponse, IncidentTripEvidenceResponse, MobilityAgentRequest, OperationsAnalyticsResponse, OperationsResponse, UploadResponse
 from app.services.agent import build_agent_context, stream_agent_response
 from app.services.agent_tools import (
     execute_agent_tool,
@@ -23,7 +23,9 @@ from app.services.agent_tools import (
 )
 from app.services.ingestion import ingest_csv
 from app.services.detection import evaluate_operations
+from app.services.data_dashboards import csv_stream, get_alert_dashboard, get_feedback_dashboard, get_trip_dashboard
 from app.services.operations import build_operations_response
+from app.services.operations_analytics import get_incident_trip_evidence, get_operations_analytics
 from app.services.reference_data import sync_reference_data
 
 
@@ -138,9 +140,240 @@ def get_dashboard(session: Session = Depends(get_db)) -> DashboardResponse:
     )
 
 
+@app.get("/api/dashboards/trips", response_model=DataDashboardResponse)
+def get_trips_dashboard(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, alias="pageSize", ge=10, le=100),
+    start_date: date | None = Query(None, alias="startDate"),
+    end_date: date | None = Query(None, alias="endDate"),
+    vendor: str | None = None,
+    office: str | None = None,
+    shift: str | None = None,
+    trip_status: str | None = Query(None, alias="status"),
+    delay_reason: str | None = Query(None, alias="delayReason"),
+    delayed: bool | None = None,
+    driver_nc: bool | None = Query(None, alias="driverNc"),
+    cab_nc: bool | None = Query(None, alias="cabNc"),
+    sort: str = "scheduledArrival",
+    direction: str = Query("desc", pattern="^(asc|desc)$"),
+    session: Session = Depends(get_db),
+) -> DataDashboardResponse:
+    return DataDashboardResponse.model_validate(get_trip_dashboard(
+        session,
+        settings,
+        page=page,
+        page_size=page_size,
+        start_date=start_date,
+        end_date=end_date,
+        vendor=vendor,
+        office=office,
+        shift=shift,
+        status=trip_status,
+        delay_reason=delay_reason,
+        delayed=delayed,
+        driver_nc=driver_nc,
+        cab_nc=cab_nc,
+        sort=sort,
+        direction=direction,
+    ))
+
+
+@app.get("/api/dashboards/feedback", response_model=DataDashboardResponse)
+def get_feedback_data_dashboard(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, alias="pageSize", ge=10, le=100),
+    start_date: date | None = Query(None, alias="startDate"),
+    end_date: date | None = Query(None, alias="endDate"),
+    vendor: str | None = None,
+    office: str | None = None,
+    trip_type: str | None = Query(None, alias="tripType"),
+    rating_category: str = Query("driver", alias="ratingCategory", pattern="^(route|driver|cab|safety|marshal)$"),
+    max_rating: int | None = Query(None, alias="maxRating", ge=1, le=5),
+    sort: str = "tripAt",
+    direction: str = Query("desc", pattern="^(asc|desc)$"),
+    session: Session = Depends(get_db),
+) -> DataDashboardResponse:
+    return DataDashboardResponse.model_validate(get_feedback_dashboard(
+        session,
+        page=page,
+        page_size=page_size,
+        start_date=start_date,
+        end_date=end_date,
+        vendor=vendor,
+        office=office,
+        trip_type=trip_type,
+        rating_category=rating_category,
+        max_rating=max_rating,
+        sort=sort,
+        direction=direction,
+    ))
+
+
+@app.get("/api/dashboards/safety-alerts", response_model=DataDashboardResponse)
+def get_safety_alerts_data_dashboard(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, alias="pageSize", ge=10, le=100),
+    start_date: date | None = Query(None, alias="startDate"),
+    end_date: date | None = Query(None, alias="endDate"),
+    state: str | None = None,
+    severity: str | None = None,
+    event_type: str | None = Query(None, alias="eventType"),
+    vendor: str | None = None,
+    office: str | None = None,
+    employee: str | None = None,
+    source: str | None = None,
+    sort: str = "startedAt",
+    direction: str = Query("desc", pattern="^(asc|desc)$"),
+    session: Session = Depends(get_db),
+) -> DataDashboardResponse:
+    return DataDashboardResponse.model_validate(get_alert_dashboard(
+        session,
+        page=page,
+        page_size=page_size,
+        start_date=start_date,
+        end_date=end_date,
+        state=state,
+        severity=severity,
+        event_type=event_type,
+        vendor=vendor,
+        office=office,
+        employee=employee,
+        source=source,
+        sort=sort,
+        direction=direction,
+    ))
+
+
+@app.get("/api/dashboards/{dashboard_name}/export")
+def export_data_dashboard(
+    dashboard_name: str,
+    start_date: date | None = Query(None, alias="startDate"),
+    end_date: date | None = Query(None, alias="endDate"),
+    vendor: str | None = None,
+    office: str | None = None,
+    shift: str | None = None,
+    trip_status: str | None = Query(None, alias="status"),
+    delay_reason: str | None = Query(None, alias="delayReason"),
+    delayed: bool | None = None,
+    driver_nc: bool | None = Query(None, alias="driverNc"),
+    cab_nc: bool | None = Query(None, alias="cabNc"),
+    trip_type: str | None = Query(None, alias="tripType"),
+    rating_category: str = Query("driver", alias="ratingCategory"),
+    max_rating: int | None = Query(None, alias="maxRating", ge=1, le=5),
+    state: str | None = None,
+    severity: str | None = None,
+    event_type: str | None = Query(None, alias="eventType"),
+    employee: str | None = None,
+    source: str | None = None,
+    sort: str | None = None,
+    direction: str = Query("desc", pattern="^(asc|desc)$"),
+    session: Session = Depends(get_db),
+) -> StreamingResponse:
+    common = {"page": 1, "page_size": 100_000, "start_date": start_date, "end_date": end_date}
+    if dashboard_name == "trips":
+        data = get_trip_dashboard(
+            session,
+            settings,
+            **common,
+            vendor=vendor,
+            office=office,
+            shift=shift,
+            status=trip_status,
+            delay_reason=delay_reason,
+            delayed=delayed,
+            driver_nc=driver_nc,
+            cab_nc=cab_nc,
+            sort=sort or "scheduledArrival",
+            direction=direction,
+        )
+        columns = [
+            ("tripId", "Trip ID"), ("scheduledArrival", "Scheduled arrival"),
+            ("actualArrival", "Actual arrival"), ("vendorId", "Vendor"),
+            ("officeId", "Office"), ("shiftId", "Shift"), ("status", "Status"),
+            ("employeeCount", "Employees"), ("delayMinutes", "Delay minutes"),
+            ("delayReason", "Delay reason"), ("noShowCount", "No-shows"),
+            ("driverNonCompliance", "Driver NC"), ("cabNonCompliance", "Cab NC"),
+        ]
+    elif dashboard_name == "feedback":
+        data = get_feedback_dashboard(
+            session,
+            **common,
+            vendor=vendor,
+            office=office,
+            trip_type=trip_type,
+            rating_category=rating_category,
+            max_rating=max_rating,
+            sort=sort or "tripAt",
+            direction=direction,
+        )
+        columns = [
+            ("tripId", "Trip ID"), ("tripAt", "Trip date"), ("employeeId", "Employee"),
+            ("vendorId", "Vendor"), ("officeId", "Office"), ("tripType", "Trip type"),
+            ("routeRating", "Route rating"), ("driverRating", "Driver rating"),
+            ("cabRating", "Cab rating"), ("safetyRating", "Safety rating"),
+            ("marshalRating", "Marshal rating"),
+        ]
+    elif dashboard_name == "safety-alerts":
+        data = get_alert_dashboard(
+            session,
+            **common,
+            state=state,
+            severity=severity,
+            event_type=event_type,
+            vendor=vendor,
+            office=office,
+            employee=employee,
+            source=source,
+            sort=sort or "startedAt",
+            direction=direction,
+        )
+        columns = [
+            ("eventId", "Event ID"), ("tripId", "Trip ID"), ("startedAt", "Started at"),
+            ("eventType", "Event type"), ("severity", "Severity"), ("state", "State"),
+            ("employeeId", "Employee"), ("vendorId", "Vendor"), ("officeId", "Office"),
+            ("source", "Source"), ("acknowledgedAt", "Acknowledged at"),
+            ("responseMinutes", "Response minutes"),
+        ]
+    else:
+        raise HTTPException(status_code=404, detail="Dashboard not found")
+
+    return StreamingResponse(
+        csv_stream(columns, data["rows"]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{dashboard_name}-filtered.csv"'},
+    )
+
+
 @app.get("/api/operations", response_model=OperationsResponse)
 def get_operations(session: Session = Depends(get_db)) -> OperationsResponse:
     return build_operations_response(session, settings)
+
+
+@app.get("/api/operations/analytics", response_model=OperationsAnalyticsResponse)
+def get_operations_analytics_endpoint(
+    start_date: date | None = Query(None, alias="startDate"),
+    end_date: date | None = Query(None, alias="endDate"),
+    session: Session = Depends(get_db),
+) -> OperationsAnalyticsResponse:
+    try:
+        return OperationsAnalyticsResponse.model_validate(
+            get_operations_analytics(session, settings, start_date, end_date)
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/api/incidents/{incident_id}/related-trips", response_model=IncidentTripEvidenceResponse)
+def get_incident_related_trips(
+    incident_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(25, alias="pageSize", ge=10, le=100),
+    session: Session = Depends(get_db),
+) -> IncidentTripEvidenceResponse:
+    evidence = get_incident_trip_evidence(session, settings, incident_id, page, page_size)
+    if evidence is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return IncidentTripEvidenceResponse.model_validate(evidence)
 
 
 @app.get("/api/agent/status")

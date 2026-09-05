@@ -35,6 +35,15 @@ def migrate_database(engine: Engine) -> None:
             connection.execute(text(
                 "ALTER TABLE shlok_trips ADD COLUMN reported_delay_minutes FLOAT"
             ))
+    with engine.begin() as connection:
+        for statement in (
+            "CREATE INDEX IF NOT EXISTS ix_shlok_trips_scheduled_arrival ON shlok_trips (scheduled_arrival)",
+            "CREATE INDEX IF NOT EXISTS ix_shlok_trips_delay_reason ON shlok_trips (delay_reason)",
+            "CREATE INDEX IF NOT EXISTS ix_shlok_trips_reported_delay_minutes ON shlok_trips (reported_delay_minutes)",
+            "CREATE INDEX IF NOT EXISTS ix_shlok_trip_feedback_trip_type ON shlok_trip_feedback (trip_type)",
+            "CREATE INDEX IF NOT EXISTS ix_shlok_safety_alerts_source ON shlok_safety_alerts (source)",
+        ):
+            connection.execute(text(statement))
     if engine.dialect.name != "sqlite":
         return
 

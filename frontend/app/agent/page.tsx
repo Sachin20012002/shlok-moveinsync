@@ -1,8 +1,10 @@
 "use client";
 
-import { ArrowUp, Bot, Building2, Gauge, Route, ShieldAlert, Sparkles, Square, UserRound } from "lucide-react";
+import { ArrowUp, Bot, ChevronsUpDown, Database, Gauge, ShieldAlert, Sparkles, Square, UserRound } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { AgentContext, AgentMessage, getAgentStatus, getIncidents, Incident, streamAgent } from "../api/client";
 import { MobileNav } from "../components/mobile-nav";
 import styles from "./agent.module.css";
@@ -127,8 +129,7 @@ export default function AgentPage() {
           <Link href="/"><Gauge size={18} /> Operations</Link>
           <Link href="/incidents"><ShieldAlert size={18} /> Incidents</Link>
           <Link className={styles.navActive} href="/agent" aria-current="page"><Bot size={18} /> Mobility Agent</Link>
-          <button disabled title="Vendor workspace coming soon"><Building2 size={18} /> Vendors</button>
-          <button disabled title="Route workspace coming soon"><Route size={18} /> Routes</button>
+          <Link href="/trips"><Database size={18} /> Data dashboards</Link>
         </nav>
         <div className={styles.persona}><span>Viewing as</span><strong>Transport Manager</strong></div>
       </aside>
@@ -144,7 +145,7 @@ export default function AgentPage() {
             <button className={scope === "general" ? styles.scopeActive : ""} onClick={() => changeScope("general")} disabled={streaming}>General</button>
             <button className={scope === "incident" ? styles.scopeActive : ""} onClick={() => changeScope("incident")} disabled={streaming || incidents.length === 0}>Incident</button>
           </div>
-          {scope === "incident" && <label><span>Selected incident</span><select value={selectedIncidentId ?? ""} onChange={(event) => changeScope("incident", Number(event.target.value))} disabled={streaming}>{incidents.map((incident) => <option value={incident.id} key={incident.id}>#{incident.id} · {incident.title}</option>)}</select></label>}
+          {scope === "incident" && <label className={styles.incidentSelector}><ShieldAlert size={17} /><span><small>Selected incident</small><select value={selectedIncidentId ?? ""} onChange={(event) => changeScope("incident", Number(event.target.value))} disabled={streaming}>{incidents.map((incident) => <option value={incident.id} key={incident.id}>{incident.severity.toUpperCase()} · {incident.title}</option>)}</select></span><ChevronsUpDown size={16} /></label>}
         </section>
 
         <section className={styles.workspace}>
@@ -152,7 +153,7 @@ export default function AgentPage() {
             {messages.map((message, index) => (
               <article className={message.role === "user" ? styles.userMessage : styles.agentMessage} key={`${message.role}-${index}`}>
                 <div className={styles.avatar}>{message.role === "user" ? <UserRound size={17} /> : <Bot size={17} />}</div>
-                <div><span>{message.role === "user" ? "You" : "Mobility Agent"}</span><p>{message.content || "Analyzing the current operation..."}</p>{message.role === "assistant" && index > 0 && <small>Advisory response · No operational records changed</small>}</div>
+                <div><span>{message.role === "user" ? "You" : "Mobility Agent"}</span>{message.role === "user" ? <p className={styles.userBubble}>{message.content}</p> : <div className={styles.markdown}><ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || "Analyzing the current operation..."}</ReactMarkdown></div>}{message.role === "assistant" && index > 0 && <small>Advisory response · No operational records changed</small>}</div>
               </article>
             ))}
             {error && <div className={styles.error} role="alert">{error}</div>}
