@@ -1,5 +1,6 @@
+import json
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,9 +14,17 @@ from app.database.migrations import migrate_database
 from app.database.models import DatasetUpload, Incident, IncidentEvent, MetricSnapshot
 from app.schemas.api import DashboardResponse, IncidentEventResponse, IncidentResponse, MobilityAgentRequest, OperationsResponse, UploadResponse
 from app.services.agent import build_agent_context, stream_agent_response
+from app.services.agent_tools import (
+    execute_agent_tool,
+    get_dimension_performance,
+    get_highest_delay_days,
+    get_trip_summary,
+    get_zero_delay_dates,
+)
 from app.services.ingestion import ingest_csv
 from app.services.detection import evaluate_operations
 from app.services.operations import build_operations_response
+from app.services.reference_data import sync_reference_data
 
 
 settings = get_settings()
@@ -25,6 +34,7 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     migrate_database(engine)
     with SessionLocal() as session:
+        sync_reference_data(session, settings.reference_data_dir)
         latest_dataset_id = session.scalar(
             select(DatasetUpload.id).order_by(desc(DatasetUpload.id)).limit(1)
         )
@@ -128,6 +138,114 @@ def get_operations(session: Session = Depends(get_db)) -> OperationsResponse:
     return build_operations_response(session, settings)
 
 
+@app.get("/api/agent/status")
+def get_agent_status() -> dict[str, str | None]:
+    return {
+        "mode": "model" if settings.ai_api_key else "grounded-local",
+        "model": settings.ai_model if settings.ai_api_key else None,
+    }
+
+
+@app.get("/api/tools/trips/summary")
+def get_trip_summary_tool(
+    startDate: date,
+    endDate: date,
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    try:
+        return get_trip_summary(session, settings, startDate, endDate)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/api/tools/trips/zero-delay-dates")
+def get_zero_delay_dates_tool(
+    startDate: date | None = None,
+    endDate: date | None = None,
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    try:
+        return get_zero_delay_dates(session, settings, startDate, endDate)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/api/tools/trips/highest-delay-days")
+def get_highest_delay_days_tool(
+    startDate: date | None = None,
+    endDate: date | None = None,
+    sortBy: str = "delayed_trips",
+    limit: int = 5,
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    try:
+        return get_highest_delay_days(session, settings, startDate, endDate, sortBy, limit)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+def _dimension_performance_tool(
+    dimension: str,
+    start_date: date | None,
+    end_date: date | None,
+    limit: int,
+    session: Session,
+) -> dict[str, object]:
+    try:
+        return get_dimension_performance(
+            session,
+            settings,
+            dimension,
+            start_date,
+            end_date,
+            limit,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.get("/api/tools/vendors/performance")
+def get_vendor_performance_tool(
+    startDate: date | None = None,
+    endDate: date | None = None,
+    limit: int = 10,
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    return _dimension_performance_tool("vendor", startDate, endDate, limit, session)
+
+
+@app.get("/api/tools/routes/performance")
+def get_route_performance_tool(
+    startDate: date | None = None,
+    endDate: date | None = None,
+    limit: int = 10,
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    return _dimension_performance_tool("route", startDate, endDate, limit, session)
+
+
+@app.get("/api/tools/shifts/performance")
+def get_shift_performance_tool(
+    startDate: date | None = None,
+    endDate: date | None = None,
+    limit: int = 10,
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    return _dimension_performance_tool("shift", startDate, endDate, limit, session)
+
+
+@app.post("/api/tools/{tool_name}")
+def execute_tool(
+    tool_name: str,
+    arguments: dict[str, object],
+    session: Session = Depends(get_db),
+) -> dict[str, object]:
+    try:
+        return execute_agent_tool(session, settings, tool_name, json.dumps(arguments))
+    except (KeyError, TypeError, ValueError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
 @app.post("/api/agent/chat")
 def chat_with_mobility_agent(
     request: MobilityAgentRequest,
@@ -142,7 +260,7 @@ def chat_with_mobility_agent(
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     return StreamingResponse(
-        stream_agent_response(request, context, settings),
+        stream_agent_response(request, context, settings, session),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache, no-transform",

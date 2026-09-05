@@ -28,6 +28,8 @@ class Trip(Base):
     shift_id: Mapped[str] = mapped_column(String(100), index=True)
     employee_id: Mapped[str] = mapped_column(String(100), index=True)
     employee_count: Mapped[int] = mapped_column(Integer, default=1)
+    office_id: Mapped[str | None] = mapped_column(String(150), nullable=True, index=True)
+    no_show_count: Mapped[int] = mapped_column(Integer, default=0)
     transport_mode: Mapped[str] = mapped_column(String(50))
     scheduled_arrival: Mapped[datetime] = mapped_column(DateTime)
     actual_arrival: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
@@ -36,6 +38,40 @@ class Trip(Base):
     distance_km: Mapped[float | None] = mapped_column(Float, nullable=True)
     rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     gps_available: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    delay_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    driver_non_compliance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    cab_non_compliance: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+
+
+class SafetyAlert(Base):
+    __tablename__ = "safety_alerts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[str] = mapped_column(String(100), index=True)
+    employee_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    event_id: Mapped[str] = mapped_column(String(100), unique=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(100), index=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    state: Mapped[str] = mapped_column(String(30), index=True)
+    severity: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
+    source: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+
+class TripFeedback(Base):
+    __tablename__ = "trip_feedback"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trip_id: Mapped[str] = mapped_column(String(100), index=True)
+    employee_id: Mapped[str | None] = mapped_column(String(100), nullable=True, index=True)
+    trip_type: Mapped[str] = mapped_column(String(20))
+    trip_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    route_rating: Mapped[int] = mapped_column(Integer)
+    driver_rating: Mapped[int] = mapped_column(Integer)
+    cab_rating: Mapped[int] = mapped_column(Integer)
+    safety_rating: Mapped[int] = mapped_column(Integer)
+    marshal_rating: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
 
 
 class MetricSnapshot(Base):

@@ -72,7 +72,20 @@ The dedicated `/incidents` page contains all incident statuses, filters, acknowl
 
 The `/agent` workspace has two read-only scopes. **General** answers from the current operational snapshot, while **Incident** grounds the conversation in one selected incident's metric, SLA, severity, evidence, and recommended action. Incident details link directly to `/agent?incidentId={id}`. Conversations stream from `POST /api/agent/chat` using server-sent events and never mutate incident state.
 
-The default active response mode is deterministic `grounded-local`; no external model is used without credentials. An OpenAI-compatible provider can be enabled with `AI_API_KEY` and `AI_BASE_URL`. Its configured default model is `gpt-4o-mini`, overridable with `AI_MODEL`.
+The default active response mode is deterministic `grounded-local`; no external model is used without credentials. An OpenAI-compatible provider or Sarvam can be enabled with `AI_PROVIDER`, `AI_API_KEY`, and `AI_BASE_URL`. The model is selected with `AI_MODEL`.
+
+Configured models can call read-only analytics tools backed by the same SQLite services as the API controllers. The catalog covers:
+
+- Trips: details, delayed trips, statistics, zero-delay dates, worst-delay days, and delay grouping by vendor, office, or shift.
+- Vendors: performance ranking, direct comparison, trip lookup, and issue summaries.
+- Safety: alert lookup and alert grouping by vendor, office, or shift.
+- Employees: delay impact and no-show statistics by office or shift.
+- Experience: overall feedback and feedback grouped by vendor or office.
+- Trends: previous-period and explicit period comparisons.
+
+Every registered tool is available through `POST /api/tools/{tool_name}` with its arguments as a JSON object. Existing focused `GET /api/tools/...` routes remain available. Dates are inclusive, bounded list tools report truncation, and analytical tools use the full loaded dataset when dates are omitted.
+
+The startup reference-data sync links matching records from the MoveInSync ride, alert, and feedback exports into SQLite. Zero-valued feedback is excluded from rating averages and reported as such. Peer comparison returns an explicit unavailable result until an external benchmark dataset is configured.
 
 ## Calculation Rules
 

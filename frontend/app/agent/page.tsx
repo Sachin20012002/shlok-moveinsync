@@ -3,7 +3,7 @@
 import { ArrowUp, Bot, Building2, Gauge, Route, ShieldAlert, Sparkles, Square, UserRound } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
-import { AgentContext, AgentMessage, getIncidents, Incident, streamAgent } from "../api/client";
+import { AgentContext, AgentMessage, getAgentStatus, getIncidents, Incident, streamAgent } from "../api/client";
 import { MobileNav } from "../components/mobile-nav";
 import styles from "./agent.module.css";
 
@@ -30,6 +30,7 @@ export default function AgentPage() {
   const [messages, setMessages] = useState<AgentMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [context, setContext] = useState<AgentContext | null>(null);
+  const [provider, setProvider] = useState<Pick<AgentContext, "mode" | "model"> | null>(null);
   const [scope, setScope] = useState<AgentScope>("general");
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedIncidentId, setSelectedIncidentId] = useState<number | null>(null);
@@ -38,8 +39,10 @@ export default function AgentPage() {
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const selectedIncident = incidents.find((incident) => incident.id === selectedIncidentId) ?? null;
+  const activeProvider = context ?? provider;
 
   useEffect(() => {
+    void getAgentStatus().then(setProvider).catch(() => setProvider(null));
     void getIncidents().then((next) => {
       setIncidents(next);
       const queryId = Number(new URLSearchParams(window.location.search).get("incidentId"));
@@ -133,7 +136,7 @@ export default function AgentPage() {
       <main className={styles.page}>
         <header className={styles.header}>
           <div><p>AI OPERATIONS COPILOT</p><h1>Mobility Agent</h1><span>{scope === "incident" ? "Analyze one incident with its exact operational evidence." : "Ask questions grounded in the overall mobility snapshot."}</span></div>
-          <div className={styles.mode}><span className={context?.mode === "model" ? styles.live : styles.local} />{context?.mode === "model" ? context.model : "Grounded local mode"}</div>
+          <div className={styles.mode}><span className={activeProvider?.mode === "model" ? styles.live : styles.local} />{activeProvider?.mode === "model" ? activeProvider.model : activeProvider ? "Grounded local mode" : "Checking provider"}</div>
         </header>
 
         <section className={styles.scopeBar} aria-label="Agent scope">
@@ -163,7 +166,7 @@ export default function AgentPage() {
               <div><dt>Completed trips</dt><dd>{context ? context.completedTrips.toLocaleString() : "-"}</dd></div>
               <div><dt>Attention incidents</dt><dd>{context?.attentionIncidents ?? "-"}</dd></div>
               <div><dt>Scope</dt><dd>{context?.scope === "incident" ? context.incidentTitle : context ? "Overall operation" : scope === "incident" ? selectedIncident?.title : "Overall operation"}</dd></div>
-              <div><dt>Response mode</dt><dd>{context?.mode === "model" ? "AI model" : context ? "Local grounded" : "Waiting"}</dd></div>
+              <div><dt>Response mode</dt><dd>{activeProvider?.mode === "model" ? `AI model · ${activeProvider.model}` : activeProvider ? "Local grounded" : "Checking"}</dd></div>
             </dl>
             <p>The agent can explain and recommend. A manager must still acknowledge incidents or take operational action.</p>
           </aside>

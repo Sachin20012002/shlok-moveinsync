@@ -173,6 +173,10 @@ export async function getIncidentEvents(id: number): Promise<IncidentEvent[]> {
   return request<IncidentEvent[]>(`/api/incidents/${id}/events`);
 }
 
+export async function getAgentStatus(): Promise<Pick<AgentContext, "mode" | "model">> {
+  return request<Pick<AgentContext, "mode" | "model">>("/api/agent/status");
+}
+
 export async function streamAgent(
   message: string,
   history: AgentMessage[],

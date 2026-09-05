@@ -14,6 +14,11 @@ INCIDENT_COLUMNS = {
 
 TRIP_COLUMNS = {
     "employee_count": "INTEGER DEFAULT 1",
+    "office_id": "VARCHAR(150)",
+    "no_show_count": "INTEGER DEFAULT 0",
+    "delay_reason": "VARCHAR(255)",
+    "driver_non_compliance": "BOOLEAN",
+    "cab_non_compliance": "BOOLEAN",
 }
 
 
@@ -49,4 +54,8 @@ def migrate_database(engine: Engine) -> None:
                 "last_notified_at = COALESCE(last_notified_at, created_at)"
             )
         )
-        connection.execute(text("UPDATE trips SET employee_count = COALESCE(employee_count, 1)"))
+        connection.execute(text(
+            "UPDATE trips SET "
+            "employee_count = COALESCE(employee_count, 1), "
+            "no_show_count = COALESCE(no_show_count, 0)"
+        ))

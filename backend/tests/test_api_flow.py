@@ -267,9 +267,14 @@ vanta-Aus,Cedar Ridge Office,CAB,"May 1, 2026",00:15,"1,097,357",LOGOUT,false,Sn
             assert trip.route_id == "Unavailable"
             assert trip.shift_id == "00:15"
             assert trip.employee_count == 2
+            assert trip.office_id == "Cedar Ridge Office"
+            assert trip.no_show_count == 0
             assert trip.transport_mode == "CAB"
             assert trip.distance_km == 26.9
             assert trip.gps_available is None
+            assert trip.delay_reason == "NODELAY"
+            assert trip.driver_non_compliance is False
+            assert trip.cab_non_compliance is False
             assert trip.scheduled_arrival == datetime(2026, 5, 1, 1, 18)
     finally:
         app.dependency_overrides.clear()

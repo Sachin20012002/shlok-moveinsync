@@ -52,12 +52,17 @@ def _moveinsync_trip(raw_row: dict[str, str | None]) -> TripRow:
         shift_id=raw_row.get("shift_type") or "Unscheduled",
         employee_id=f"aggregate:{trip_id}",
         employee_count=employee_count,
+        office_id=raw_row.get("office"),
+        no_show_count=int(_number(raw_row.get("noshow_cnt") or "") or 0),
         transport_mode=raw_row.get("product_type") or "Unknown",
         scheduled_arrival=_epoch(raw_row.get("planned_end_epoch") or ""),
         actual_arrival=actual_arrival,
         status="completed" if actual_arrival is not None else "in_progress",
         distance_km=_number(raw_row.get("traveled_km") or ""),
         gps_available=None,
+        delay_reason=raw_row.get("delay_reason"),
+        driver_non_compliance=raw_row.get("is_driver_nc"),
+        cab_non_compliance=raw_row.get("is_cab_nc"),
     )
 
 
