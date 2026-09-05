@@ -4,6 +4,7 @@ import { Activity, AlertTriangle, ArrowUpRight, Bot, Building2, Check, ChevronRi
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getIncidents, getOperationsAnalytics, Incident, OperationsAnalytics } from "./api/client";
+import { BrandLockup } from "./components/brand-lockup";
 import { MobileNav } from "./components/mobile-nav";
 import styles from "./page.module.css";
 
@@ -80,7 +81,7 @@ export default function Home() {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}><span>SL</span><strong>SHLOK</strong></div>
+        <BrandLockup />
         <nav aria-label="Primary navigation">
           <Link className={styles.navActive} href="/" aria-current="page"><Gauge size={18} /> Operations</Link>
           <Link href="/incidents"><ShieldAlert size={18} /> Incidents</Link>

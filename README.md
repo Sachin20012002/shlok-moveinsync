@@ -1,103 +1,177 @@
-# SHLOK - MoveInSync Hackathon
+# SHLOK - Agentic Mobility Intelligence
 
-**Bessemer Tech Catalyst 2026**
+SHLOK is a working enterprise-mobility operations prototype built for the **MoveInSync track of Bessemer Tech Catalyst 2026**. It turns trip data into deterministic service metrics, proactive incidents, operational evidence, recommended actions, and grounded conversational analysis for a transport manager.
 
-**Track:** MoveInSync
+The challenge asks for an agentic intelligence and reporting layer that can sense operational conditions, reason against context such as an SLA or historical trend, and help a mobility persona act. The original brief is available in [the MoveInSync problem statement](./MoveInSync%20-%20Anonymised%20Trip-Log%20Dataset/Dictionary/problem_explanation_7qdzf3jxklt.pdf).
 
-## Overview
+## What SHLOK delivers
 
-Working first milestone for an agentic enterprise mobility layer. A transport manager can upload normalized trip data, inspect deterministic OTA metrics against a 90% SLA, review an automatically created incident, and acknowledge it.
+- **Decision support:** an operations control room with OTA, trip volume, delay impact, vendor performance, shift reliability, weekly trends, and an attention queue.
+- **Proactive detection:** automatic overall OTA, vendor OTA, and GPS-availability incidents after every upload.
+- **Contextual reasoning:** every official alert is evaluated against configured SLA and minimum-volume rules; the dashboard also exposes historical trends and contributing dimensions.
+- **Action workflow:** incidents include evidence, recommended next actions, acknowledgment, re-notification after deterioration, recovery history, and a downloadable notification draft.
+- **Conversational analysis:** a read-only mobility agent answers from the current operational snapshot or one selected incident. The deployed configuration uses Sarvam with `sarvam-105b`; without a key it falls back to deterministic grounded-local mode.
+- **Messy-data handling:** the ingestion and reference-data layers normalize IDs and epochs, retain invalid/skipped-row counts, tolerate missing values, and expose data-quality warnings.
 
-## Run Locally
+The current persona is the **transport manager**. Authentication, live vendor integrations, actual email delivery, a full historical pipeline, and external peer benchmarks are intentionally outside this prototype's scope, matching the challenge brief.
 
-Prerequisites: Python 3.11+ and Node.js 20+.
+## Architecture
 
-Open two PowerShell terminals from the repository root.
+SHLOK is a two-application modular monolith: a browser-facing Next.js application and a FastAPI API containing the domain services and optional AI integration.
 
-Terminal 1, backend:
+```mermaid
+flowchart LR
+    U[Transport manager] --> F[Next.js 16 frontend]
+    F -->|REST JSON| A[FastAPI API]
+    F -->|Server-sent events| A
+    C[Trip CSV upload] --> A
+    R[MoveInSync reference exports] --> S[Startup reference-data sync]
+    S --> D[(SQLite / PostgreSQL)]
+    A --> I[Ingestion and validation]
+    I --> D
+    I --> M[Deterministic metrics]
+    M --> X[Incident detection and lifecycle]
+    X --> D
+    A --> O[Operations and dashboard services]
+    O --> D
+    A --> G[Grounded mobility agent]
+    G --> T[Read-only analytics tools]
+    T --> D
+    G -. configured .-> P[Sarvam API / sarvam-105b]
+```
+
+Python calculations remain the source of truth for operational metrics. The AI layer explains and recommends; it cannot acknowledge incidents or otherwise mutate operational records.
+
+## Repository layout
+
+```text
+backend/        FastAPI application, domain services, persistence, and tests
+frontend/       Next.js operations interface and typed API client
+sample-data/    Small deterministic CSVs for the demo flows
+MoveInSync - Anonymised Trip-Log Dataset/
+                Challenge brief and source-data dictionaries
+outputs/        Local generated/cleaned data; ignored and not consumed by the app
+```
+
+See [frontend/README.md](./frontend/README.md) and [backend/README.md](./backend/README.md) for component-level architecture, configuration, and commands.
+
+## Prerequisites
+
+- Python 3.11 or later
+- Node.js 20 or later
+- npm
+
+## Run locally
+
+Open two terminals at the repository root.
+
+### 1. Start the backend
 
 ```powershell
 Set-Location .\backend
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-Copy-Item .env.example .env -ErrorAction SilentlyContinue
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 python -m uvicorn app.main:app --reload
 ```
 
-Terminal 2, frontend:
+### 2. Start the frontend
 
 ```powershell
 Set-Location .\frontend
 npm install
-Copy-Item .env.example .env.local -ErrorAction SilentlyContinue
+if (-not (Test-Path .env.local)) { Copy-Item .env.example .env.local }
 npm run dev
 ```
 
-Open `http://localhost:3000`. Select **Upload trip CSV** and choose `sample-data/ota-breach-demo.csv`. The upload produces overall OTA, vendor OTA, and GPS availability incidents. Upload `sample-data/ota-breach-evening.csv` next to append another 12 trips and another set of incidents.
+Open <http://localhost:3000>. The API health check is at <http://localhost:8000/health> and interactive API documentation is at <http://localhost:8000/docs>.
 
-To demonstrate re-notification on deterioration with a fresh database:
+## Demo flows
+
+### Initial breach detection
+
+1. Upload the first sample through Swagger at <http://localhost:8000/docs>, or run this from `backend/`:
+
+   ```powershell
+   curl.exe -F "file=@../sample-data/ota-breach-demo.csv" http://localhost:8000/api/datasets/upload
+   ```
+
+2. Open <http://localhost:3000> and review the generated overall OTA, vendor OTA, and GPS availability signals.
+3. Open an incident to inspect contributing trips, the SLA gap, evidence, and the recommended action.
+4. Acknowledge it and generate the notification draft.
+
+Uploads append trips. Each `trip_id` must therefore be globally unique.
+
+### Re-notification after deterioration
+
+Use a fresh `backend/mobility.db`:
 
 1. Upload `sample-data/ota-breach-demo.csv`.
 2. Acknowledge the overall OTA incident at 75%.
-3. Upload `sample-data/ota-critical-deterioration.csv`.
-4. The same incident ID reopens at 37.5%, shows notification number 2, and requires acknowledgment again.
+3. Upload `sample-data/ota-critical-deterioration.csv` through the same API operation.
+4. The existing incident reopens at 37.5%, increments its notification count, and requires acknowledgment again.
 
-Useful URLs:
+You can also upload `sample-data/ota-breach-evening.csv` after the first sample to demonstrate an appended batch and additional operational signals.
 
-- Frontend: `http://localhost:3000`
-- Backend health: `http://localhost:8000/health`
-- Swagger API: `http://localhost:8000/docs`
+## Core business rules
 
-SQLite data is stored locally in `backend/mobility.db`. Uploads append to the database; the dashboard metrics represent the latest uploaded dataset while the incident queue retains incidents from every upload. CSV columns stay the same, but every row must have a globally unique `trip_id`.
+- OTA target: **90%**.
+- A trip arriving no more than five minutes late counts as on time.
+- Overall OTA requires at least 10 completed trips; vendor OTA requires at least 3.
+- Active incident identity is scoped to the operational rule, preventing duplicate open incidents.
+- An acknowledged incident reopens after a five-percentage-point deterioration or a severity escalation.
+- Recovery to the configured target resolves the active incident.
+- Incident events preserve opening, escalation/reopening, acknowledgment, communication, and recovery history.
 
-## Implemented API
+All thresholds can be changed through backend environment variables.
 
-- `GET /health`
-- `POST /api/datasets/upload`
-- `GET /api/dashboard`
-- `GET /api/operations`
-- `GET /api/incidents`
-- `GET /api/incidents/{id}`
-- `GET /api/incidents/{id}/events`
-- `POST /api/incidents/{id}/acknowledge`
+## Main interfaces
 
-## Operations Workspace
+| Interface | Purpose |
+|---|---|
+| `/` | Operations health, weekly trend, priority incidents, vendor and shift performance |
+| `/incidents` | Incident filtering, evidence, lifecycle, acknowledgment, and communication draft |
+| `/agent` | General or incident-scoped conversational analysis |
+| `/trips` | Trip-level filtering and CSV export |
+| `/feedback` | Experience ratings and CSV export |
+| `/safety-alerts` | Safety-event filtering and CSV export |
 
-The Operations page includes current mobility health, a five-item attention queue, live trip exceptions, shift readiness, a vendor watchlist, an operational timeline, data-quality status, and recommended actions. These views are computed from SQLite through `GET /api/operations`.
+The principal API groups are `/api/datasets`, `/api/dashboard`, `/api/operations`, `/api/dashboards`, `/api/incidents`, `/api/agent`, and `/api/tools`.
 
-The dedicated `/incidents` page contains all incident statuses, filters, acknowledgment controls, notification counts, and lifecycle history.
+## Current deployment configuration
 
-## Mobility Agent
+The active environment is configured for:
 
-The `/agent` workspace has two read-only scopes. **General** answers from the current operational snapshot, while **Incident** grounds the conversation in one selected incident's metric, SLA, severity, evidence, and recommended action. Incident details link directly to `/agent?incidentId={id}`. Conversations stream from `POST /api/agent/chat` using server-sent events and never mutate incident state.
+- Neon managed PostgreSQL in AWS Asia Pacific (Singapore)
+- Sarvam as the AI provider
+- `https://api.sarvam.ai` as the provider base URL
+- `sarvam-105b` as the agent model
+- local frontend origins on port 3000
 
-The default active response mode is deterministic `grounded-local`; no external model is used without credentials. An OpenAI-compatible provider or Sarvam can be enabled with `AI_PROVIDER`, `AI_API_KEY`, and `AI_BASE_URL`. The model is selected with `AI_MODEL`.
+The Neon password and Sarvam API key belong only in `backend/.env` or a deployment secret manager. They are deliberately omitted from repository documentation and examples.
 
-Configured models can call read-only analytics tools backed by the same SQLite services as the API controllers. The catalog covers:
+## Verification
 
-- Trips: details, delayed trips, statistics, zero-delay dates, worst-delay days, and delay grouping by vendor, office, or shift.
-- Vendors: performance ranking, direct comparison, trip lookup, and issue summaries.
-- Safety: alert lookup and alert grouping by vendor, office, or shift.
-- Employees: delay impact and no-show statistics by office or shift.
-- Experience: overall feedback and feedback grouped by vendor or office.
-- Trends: previous-period and explicit period comparisons.
+```powershell
+Set-Location .\backend
+python -m pytest -q
 
-Every registered tool is available through `POST /api/tools/{tool_name}` with its arguments as a JSON object. Existing focused `GET /api/tools/...` routes remain available. Dates are inclusive, bounded list tools report truncation, and analytical tools use the full loaded dataset when dates are omitted.
+Set-Location ..\frontend
+npm run lint
+npm run build
+```
 
-The startup reference-data sync links matching records from the MoveInSync ride, alert, and feedback exports into SQLite. Zero-valued feedback is excluded from rating averages and reported as such. Peer comparison returns an explicit unavailable result until an external benchmark dataset is configured.
+Backend tests cover metric boundaries, ingestion, incident detection and reopening, data dashboards, analytics, database URL normalization, and grounded/model-backed agent behavior.
 
-## Calculation Rules
+## Deployment path
 
-- The OTA SLA is 90%.
-- Arrival up to and including five minutes late is on time.
-- OTA is evaluated only after at least 10 completed trips.
-- Duplicate open OTA incidents are prevented.
-- Incident identity is scoped by operational rule, such as overall OTA or a specific vendor's OTA. New trip batches update the active incident instead of creating duplicates.
-- A dataset can create overall OTA, vendor OTA, and GPS availability incidents.
-- Acknowledged incidents reopen after a five percentage-point deterioration or severity escalation.
-- Incident events record opening, acknowledgment, reopening/escalation, and recovery.
-- Python remains the source of truth for official metrics; agent responses are advisory and grounded in those calculations.
+- Build and host the Next.js frontend as a Node.js web application.
+- Deploy FastAPI behind an HTTPS application service or container runtime.
+- Set `NEXT_PUBLIC_API_URL` to the public API origin and configure `ALLOWED_ORIGINS` accordingly.
+- Replace local SQLite with managed PostgreSQL through `DATABASE_URL`.
+- Keep the Sarvam credential only in backend secrets; omit it to retain deterministic local-agent mode.
+- For enterprise adoption, the next architectural steps are tenant-scoped data access, authentication/authorization, background ingestion, durable notifications, observability, and managed schema migrations.
 
 ## Team SHLOK
 
@@ -106,9 +180,3 @@ The startup reference-data sync links matching records from the MoveInSync ride,
 - **L**akshmi
 - **O**viya
 - **K**rithika
-
-## Development
-
-The `main` branch should contain integrated, working code.
-
-Development should happen on feature branches and changes should be merged into `main` through pull requests.

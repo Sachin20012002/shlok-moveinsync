@@ -4,6 +4,7 @@ import { Activity, ArrowLeft, ArrowUpDown, Bot, Check, ChevronLeft, ChevronRight
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { acknowledgeIncident, getIncidentEmailDraft, getIncidentEvents, getIncidents, getIncidentTrips, Incident, IncidentEmailDraft, IncidentEvent, IncidentTripEvidence, markIncidentEmailSent } from "../api/client";
+import { BrandLockup } from "../components/brand-lockup";
 import { MobileNav } from "../components/mobile-nav";
 import styles from "./incidents.module.css";
 
@@ -122,7 +123,7 @@ export default function IncidentsPage() {
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}><span>SL</span><strong>SHLOK</strong></div>
+        <BrandLockup />
         <nav aria-label="Primary navigation">
           <Link href="/"><Gauge size={18} /> Operations</Link>
           <Link className={styles.navActive} href="/incidents" aria-current="page"><ShieldAlert size={18} /> Incidents</Link>

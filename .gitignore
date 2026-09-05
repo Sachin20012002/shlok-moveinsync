@@ -11,6 +11,7 @@ Desktop.ini
 
 # Python
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.db
 
@@ -38,6 +39,8 @@ next-env.d.ts
 *.log
 tmp/
 temp/
+artifacts/
+outputs/
 
 # Local datasets
 *.csv
